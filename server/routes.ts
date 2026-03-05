@@ -25,6 +25,121 @@ function requireAuth(req: Request, res: Response, next: Function) {
   next();
 }
 
+const PRODUITS_DEFAUT = [
+  // ── BOISSONS SOFTS ──
+  { nom: "Coca-Cola 33cl", categorie: "Boissons", prixAchat: "250", prixVente: "400", stock: 50 },
+  { nom: "Coca-Cola 50cl", categorie: "Boissons", prixAchat: "350", prixVente: "500", stock: 50 },
+  { nom: "Fanta Orange 33cl", categorie: "Boissons", prixAchat: "250", prixVente: "400", stock: 48 },
+  { nom: "Fanta Citron 33cl", categorie: "Boissons", prixAchat: "250", prixVente: "400", stock: 36 },
+  { nom: "Sprite 33cl", categorie: "Boissons", prixAchat: "250", prixVente: "400", stock: 40 },
+  { nom: "Mirinda Orange 33cl", categorie: "Boissons", prixAchat: "200", prixVente: "350", stock: 30 },
+  { nom: "Mirinda Citron 33cl", categorie: "Boissons", prixAchat: "200", prixVente: "350", stock: 30 },
+  { nom: "Pepsi 33cl", categorie: "Boissons", prixAchat: "220", prixVente: "400", stock: 24 },
+  { nom: "7UP 33cl", categorie: "Boissons", prixAchat: "220", prixVente: "400", stock: 24 },
+  { nom: "Malta Guinness 33cl", categorie: "Boissons", prixAchat: "300", prixVente: "500", stock: 36 },
+  { nom: "Youki Citrus 33cl", categorie: "Boissons", prixAchat: "200", prixVente: "350", stock: 48 },
+  { nom: "Youki Ananas 33cl", categorie: "Boissons", prixAchat: "200", prixVente: "350", stock: 48 },
+  { nom: "Youki Pomme 33cl", categorie: "Boissons", prixAchat: "200", prixVente: "350", stock: 36 },
+  { nom: "Youki Raisin 33cl", categorie: "Boissons", prixAchat: "200", prixVente: "350", stock: 24 },
+  { nom: "Schweppes Tonic 33cl", categorie: "Boissons", prixAchat: "350", prixVente: "600", stock: 20 },
+  { nom: "Schweppes Citrus 33cl", categorie: "Boissons", prixAchat: "350", prixVente: "600", stock: 20 },
+  { nom: "Top Ananas 33cl", categorie: "Boissons", prixAchat: "180", prixVente: "300", stock: 30 },
+  { nom: "Top Citron 33cl", categorie: "Boissons", prixAchat: "180", prixVente: "300", stock: 30 },
+  // ── EAUX ──
+  { nom: "Eau Minérale SBL 50cl", categorie: "Boissons", prixAchat: "150", prixVente: "250", stock: 60 },
+  { nom: "Eau Minérale SBL 1.5L", categorie: "Boissons", prixAchat: "350", prixVente: "500", stock: 30 },
+  { nom: "Eau Minérale Omi 50cl", categorie: "Boissons", prixAchat: "150", prixVente: "250", stock: 60 },
+  { nom: "Eau Minérale Omi 1.5L", categorie: "Boissons", prixAchat: "350", prixVente: "500", stock: 24 },
+  { nom: "Eau Gazeuse 50cl", categorie: "Boissons", prixAchat: "400", prixVente: "700", stock: 20 },
+  // ── JUS MAISON ──
+  { nom: "Jus d'Orange (verre)", categorie: "Boissons", prixAchat: "100", prixVente: "500", stock: 0 },
+  { nom: "Jus Ananas maison", categorie: "Boissons", prixAchat: "100", prixVente: "500", stock: 0 },
+  { nom: "Bissap maison (verre)", categorie: "Boissons", prixAchat: "80", prixVente: "400", stock: 0 },
+  { nom: "Gnamakoudji (verre)", categorie: "Boissons", prixAchat: "80", prixVente: "400", stock: 0 },
+  { nom: "Jus Tamarin maison", categorie: "Boissons", prixAchat: "80", prixVente: "400", stock: 0 },
+  { nom: "Sobolo maison (verre)", categorie: "Boissons", prixAchat: "80", prixVente: "400", stock: 0 },
+  // ── CAFÉS / THÉS ──
+  { nom: "Café Expresso", categorie: "Boissons", prixAchat: "100", prixVente: "500", stock: 0 },
+  { nom: "Café Nescafé", categorie: "Boissons", prixAchat: "100", prixVente: "400", stock: 0 },
+  { nom: "Thé Vert (sachet)", categorie: "Boissons", prixAchat: "50", prixVente: "300", stock: 20 },
+  { nom: "Infusion locale", categorie: "Boissons", prixAchat: "50", prixVente: "300", stock: 0 },
+  // ── BIÈRES (BB LOMÉ / SNB) ──
+  { nom: "Flag Spéciale 65cl", categorie: "Alcools", prixAchat: "500", prixVente: "800", stock: 96 },
+  { nom: "Flag Spéciale 33cl", categorie: "Alcools", prixAchat: "300", prixVente: "500", stock: 72 },
+  { nom: "Castel Beer 65cl", categorie: "Alcools", prixAchat: "500", prixVente: "800", stock: 72 },
+  { nom: "Castel Beer 33cl", categorie: "Alcools", prixAchat: "300", prixVente: "500", stock: 48 },
+  { nom: "Guilele 65cl", categorie: "Alcools", prixAchat: "450", prixVente: "750", stock: 60 },
+  { nom: "Guilele 33cl", categorie: "Alcools", prixAchat: "280", prixVente: "500", stock: 48 },
+  { nom: "Awooyo 65cl", categorie: "Alcools", prixAchat: "450", prixVente: "750", stock: 48 },
+  { nom: "33 Export 65cl", categorie: "Alcools", prixAchat: "500", prixVente: "800", stock: 48 },
+  { nom: "Star Beer 65cl", categorie: "Alcools", prixAchat: "500", prixVente: "800", stock: 36 },
+  { nom: "TCB 65cl", categorie: "Alcools", prixAchat: "500", prixVente: "800", stock: 36 },
+  { nom: "Beaufort 65cl", categorie: "Alcools", prixAchat: "500", prixVente: "800", stock: 24 },
+  { nom: "Guinness 50cl", categorie: "Alcools", prixAchat: "600", prixVente: "1000", stock: 36 },
+  { nom: "Heineken 33cl", categorie: "Alcools", prixAchat: "600", prixVente: "1000", stock: 24 },
+  { nom: "Desperados 33cl", categorie: "Alcools", prixAchat: "700", prixVente: "1200", stock: 24 },
+  { nom: "Becks 33cl", categorie: "Alcools", prixAchat: "700", prixVente: "1200", stock: 12 },
+  { nom: "Amstel 33cl", categorie: "Alcools", prixAchat: "600", prixVente: "1000", stock: 12 },
+  // ── SPIRITUEUX ──
+  { nom: "Rhum Negrita 4cl", categorie: "Alcools", prixAchat: "200", prixVente: "500", stock: 0 },
+  { nom: "Rhum Negrita 20cl", categorie: "Alcools", prixAchat: "1500", prixVente: "2500", stock: 6 },
+  { nom: "Rhum Diplomatico 4cl", categorie: "Alcools", prixAchat: "500", prixVente: "1500", stock: 0 },
+  { nom: "Whisky JD 4cl", categorie: "Alcools", prixAchat: "800", prixVente: "2000", stock: 0 },
+  { nom: "Whisky JB 4cl", categorie: "Alcools", prixAchat: "600", prixVente: "1500", stock: 0 },
+  { nom: "Whisky Ballantine's 4cl", categorie: "Alcools", prixAchat: "600", prixVente: "1500", stock: 0 },
+  { nom: "Vodka Smirnoff 4cl", categorie: "Alcools", prixAchat: "500", prixVente: "1200", stock: 0 },
+  { nom: "Gordon's Gin 4cl", categorie: "Alcools", prixAchat: "500", prixVente: "1200", stock: 0 },
+  { nom: "Pastis Ricard 4cl", categorie: "Alcools", prixAchat: "400", prixVente: "1000", stock: 0 },
+  { nom: "Campari 4cl", categorie: "Alcools", prixAchat: "500", prixVente: "1200", stock: 0 },
+  { nom: "Baileys 4cl", categorie: "Alcools", prixAchat: "700", prixVente: "1500", stock: 0 },
+  { nom: "Schnapps Apfelkorn 4cl", categorie: "Alcools", prixAchat: "400", prixVente: "800", stock: 0 },
+  { nom: "Liqueur Amaretto 4cl", categorie: "Alcools", prixAchat: "500", prixVente: "1200", stock: 0 },
+  { nom: "Tequila 4cl", categorie: "Alcools", prixAchat: "600", prixVente: "1500", stock: 0 },
+  // ── VINS ──
+  { nom: "Vin Rouge (verre)", categorie: "Alcools", prixAchat: "500", prixVente: "1500", stock: 0 },
+  { nom: "Vin Blanc (verre)", categorie: "Alcools", prixAchat: "500", prixVente: "1500", stock: 0 },
+  { nom: "Vin Rosé (verre)", categorie: "Alcools", prixAchat: "500", prixVente: "1500", stock: 0 },
+  { nom: "Champagne (flûte)", categorie: "Alcools", prixAchat: "1500", prixVente: "4000", stock: 0 },
+  { nom: "Prosecco (verre)", categorie: "Alcools", prixAchat: "1000", prixVente: "3000", stock: 0 },
+  // ── COCKTAILS ──
+  { nom: "Mojito", categorie: "Cocktails", prixAchat: "500", prixVente: "2000", stock: 0 },
+  { nom: "Daiquiri", categorie: "Cocktails", prixAchat: "500", prixVente: "2000", stock: 0 },
+  { nom: "Piña Colada", categorie: "Cocktails", prixAchat: "600", prixVente: "2500", stock: 0 },
+  { nom: "Sex on the Beach", categorie: "Cocktails", prixAchat: "600", prixVente: "2500", stock: 0 },
+  { nom: "Blue Lagoon", categorie: "Cocktails", prixAchat: "500", prixVente: "2000", stock: 0 },
+  { nom: "Tequila Sunrise", categorie: "Cocktails", prixAchat: "600", prixVente: "2500", stock: 0 },
+  { nom: "Cuba Libre", categorie: "Cocktails", prixAchat: "500", prixVente: "2000", stock: 0 },
+  { nom: "Gin Tonic", categorie: "Cocktails", prixAchat: "600", prixVente: "2000", stock: 0 },
+  { nom: "Spritz Aperol", categorie: "Cocktails", prixAchat: "700", prixVente: "2500", stock: 0 },
+  { nom: "Margarita", categorie: "Cocktails", prixAchat: "600", prixVente: "2500", stock: 0 },
+  // ── NOURRITURE ──
+  { nom: "Arachides grillées (portion)", categorie: "Nourriture", prixAchat: "100", prixVente: "300", stock: 0 },
+  { nom: "Chips Crunchy", categorie: "Nourriture", prixAchat: "150", prixVente: "300", stock: 30 },
+  { nom: "Biscuits Salés", categorie: "Nourriture", prixAchat: "100", prixVente: "200", stock: 24 },
+  { nom: "Omelette", categorie: "Nourriture", prixAchat: "300", prixVente: "800", stock: 0 },
+  { nom: "Brochettes de bœuf (5 pics)", categorie: "Nourriture", prixAchat: "800", prixVente: "2000", stock: 0 },
+  { nom: "Brochettes de poulet (5 pics)", categorie: "Nourriture", prixAchat: "700", prixVente: "1800", stock: 0 },
+  { nom: "Alloco (portion)", categorie: "Nourriture", prixAchat: "200", prixVente: "500", stock: 0 },
+  { nom: "Gésiers sautés (portion)", categorie: "Nourriture", prixAchat: "500", prixVente: "1500", stock: 0 },
+  { nom: "Sardines grillées", categorie: "Nourriture", prixAchat: "800", prixVente: "2000", stock: 0 },
+  { nom: "Tilapia grillé", categorie: "Nourriture", prixAchat: "1500", prixVente: "4000", stock: 0 },
+  { nom: "Poulet braisé (1/4)", categorie: "Nourriture", prixAchat: "1000", prixVente: "2500", stock: 0 },
+  { nom: "Poulet braisé (1/2)", categorie: "Nourriture", prixAchat: "2000", prixVente: "5000", stock: 0 },
+  { nom: "Attiéké + Poisson", categorie: "Nourriture", prixAchat: "1000", prixVente: "2500", stock: 0 },
+  { nom: "Riz sauce tomate", categorie: "Nourriture", prixAchat: "500", prixVente: "1500", stock: 0 },
+  { nom: "Sandwich club", categorie: "Nourriture", prixAchat: "600", prixVente: "1500", stock: 0 },
+  { nom: "Hot-dog", categorie: "Nourriture", prixAchat: "400", prixVente: "1000", stock: 0 },
+  { nom: "Hamburger", categorie: "Nourriture", prixAchat: "700", prixVente: "2000", stock: 0 },
+  { nom: "Frites de pomme de terre", categorie: "Nourriture", prixAchat: "300", prixVente: "1000", stock: 0 },
+  { nom: "Pizza Margherita (part)", categorie: "Nourriture", prixAchat: "800", prixVente: "2500", stock: 0 },
+  { nom: "Salade Niçoise", categorie: "Nourriture", prixAchat: "600", prixVente: "2000", stock: 0 },
+  // ── CHICHA / CIGARETTES ──
+  { nom: "Chicha / Narguilé (session)", categorie: "Autres", prixAchat: "2000", prixVente: "5000", stock: 0 },
+  { nom: "Cigarette Marlboro (unité)", categorie: "Autres", prixAchat: "150", prixVente: "300", stock: 40 },
+  { nom: "Cigarette Dunhill (unité)", categorie: "Autres", prixAchat: "200", prixVente: "400", stock: 20 },
+  { nom: "Cigarillo (unité)", categorie: "Autres", prixAchat: "300", prixVente: "600", stock: 10 },
+];
+
 export async function registerRoutes(app: Express): Promise<Server> {
   const PgStore = connectPgSimple(session);
 
@@ -38,6 +153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
+  // ── AUTH ──
   app.post("/api/auth/register", async (req, res) => {
     try {
       const data = insertUserSchema.parse(req.body);
@@ -69,9 +185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/auth/logout", (req, res) => {
-    req.session.destroy(() => {
-      res.json({ success: true });
-    });
+    req.session.destroy(() => res.json({ success: true }));
   });
 
   app.get("/api/auth/me", async (req, res) => {
@@ -81,6 +195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ id: user.id, email: user.email, nom: user.nom });
   });
 
+  // ── DASHBOARD ──
   app.get("/api/dashboard", requireAuth, async (req, res) => {
     try {
       const stats = await storage.getDashboardStats(req.session.userId!);
@@ -90,16 +205,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── PRODUITS ──
   app.get("/api/produits", requireAuth, async (req, res) => {
-    const list = await storage.getProduits(req.session.userId!);
-    res.json(list);
+    res.json(await storage.getProduits(req.session.userId!));
   });
 
   app.post("/api/produits", requireAuth, async (req, res) => {
     try {
       const data = insertProduitSchema.parse(req.body);
-      const p = await storage.createProduit({ ...data, userId: req.session.userId! });
-      res.json(p);
+      res.json(await storage.createProduit({ ...data, userId: req.session.userId! }));
     } catch (e: any) {
       res.status(400).json({ message: e.message });
     }
@@ -108,8 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/produits/:id", requireAuth, async (req, res) => {
     try {
       const data = insertProduitSchema.partial().parse(req.body);
-      const p = await storage.updateProduit(parseInt(req.params.id), data);
-      res.json(p);
+      res.json(await storage.updateProduit(parseInt(req.params.id), data));
     } catch (e: any) {
       res.status(400).json({ message: e.message });
     }
@@ -124,31 +237,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/ventes", requireAuth, async (req, res) => {
-    const list = await storage.getVentes(req.session.userId!);
-    res.json(list);
-  });
-
-  app.post("/api/ventes", requireAuth, async (req, res) => {
+  // ── RÉAPPROVISIONNEMENT ──
+  app.post("/api/produits/:id/reappro", requireAuth, async (req, res) => {
     try {
-      const data = insertVenteSchema.parse(req.body);
-      const v = await storage.createVente(req.session.userId!, data.note, data.items);
-      res.json(v);
+      const { quantite, fournisseur } = req.body;
+      if (!quantite || isNaN(Number(quantite)) || Number(quantite) <= 0) {
+        return res.status(400).json({ message: "Quantité invalide" });
+      }
+      const updated = await storage.reapprovisionner(
+        parseInt(req.params.id),
+        Number(quantite),
+        fournisseur || "Autre"
+      );
+      res.json(updated);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
     }
   });
 
+  // ── SEED PRODUITS PAR DÉFAUT ──
+  app.post("/api/seed/produits", requireAuth, async (req, res) => {
+    try {
+      const existing = await storage.getProduits(req.session.userId!);
+      if (existing.length > 0) {
+        return res.status(400).json({ message: "Des produits existent déjà" });
+      }
+      const created = [];
+      for (const p of PRODUITS_DEFAUT) {
+        const prod = await storage.createProduit({ ...p, userId: req.session.userId! });
+        created.push(prod);
+      }
+      res.json({ count: created.length, message: `${created.length} produits créés` });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // ── VENTES ──
+  app.get("/api/ventes", requireAuth, async (req, res) => {
+    res.json(await storage.getVentes(req.session.userId!));
+  });
+
+  app.post("/api/ventes", requireAuth, async (req, res) => {
+    try {
+      const data = insertVenteSchema.parse(req.body);
+      res.json(await storage.createVente(req.session.userId!, data.note, data.items));
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  // ── DÉPENSES ──
   app.get("/api/depenses", requireAuth, async (req, res) => {
-    const list = await storage.getDepenses(req.session.userId!);
-    res.json(list);
+    res.json(await storage.getDepenses(req.session.userId!));
   });
 
   app.post("/api/depenses", requireAuth, async (req, res) => {
     try {
       const data = insertDepenseSchema.parse(req.body);
-      const d = await storage.createDepense({ ...data, userId: req.session.userId! });
-      res.json(d);
+      res.json(await storage.createDepense({ ...data, userId: req.session.userId! }));
     } catch (e: any) {
       res.status(400).json({ message: e.message });
     }
@@ -157,8 +304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/depenses/:id", requireAuth, async (req, res) => {
     try {
       const data = insertDepenseSchema.partial().parse(req.body);
-      const d = await storage.updateDepense(parseInt(req.params.id), data);
-      res.json(d);
+      res.json(await storage.updateDepense(parseInt(req.params.id), data));
     } catch (e: any) {
       res.status(400).json({ message: e.message });
     }

@@ -149,6 +149,15 @@ export class DatabaseStorage implements IStorage {
     await db.delete(depenses).where(eq(depenses.id, id));
   }
 
+  async reapprovisionner(id: number, quantite: number, fournisseur: string): Promise<Produit> {
+    const [updated] = await db
+      .update(produits)
+      .set({ stock: sql`${produits.stock} + ${quantite}` })
+      .where(eq(produits.id, id))
+      .returning();
+    return updated;
+  }
+
   async getDashboardStats(userId: number) {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
