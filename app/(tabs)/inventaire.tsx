@@ -23,6 +23,7 @@ interface Produit {
   id: number;
   nom: string;
   description?: string;
+  emoji?: string;
   categorie: string;
   prixAchat: string;
   prixVente: string;
@@ -30,6 +31,22 @@ interface Produit {
 }
 
 const CATEGORIES = ["Boissons", "Alcools", "Cocktails", "Nourriture", "Autres"];
+
+const CAT_COLORS: Record<string, string> = {
+  Boissons: "#3A86FF",
+  Alcools: "#8B5CF6",
+  Cocktails: "#EC4899",
+  Nourriture: "#F97316",
+  Autres: "#6B7280",
+};
+
+const CAT_EMOJIS: Record<string, string> = {
+  Boissons: "🥤",
+  Alcools: "🍺",
+  Cocktails: "🍹",
+  Nourriture: "🍽️",
+  Autres: "📦",
+};
 
 const FOURNISSEURS = [
   { id: "bb_lome", label: "BB Lomé", icon: "business" as const, color: "#E9A818" },
@@ -55,6 +72,7 @@ function ProduitModal({
   const qc = useQueryClient();
   const [nom, setNom] = useState(initial?.nom ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
+  const [emoji, setEmoji] = useState(initial?.emoji ?? "");
   const [categorie, setCategorie] = useState(initial?.categorie ?? "Boissons");
   const [prixAchat, setPrixAchat] = useState(initial?.prixAchat?.toString() ?? "");
   const [prixVente, setPrixVente] = useState(initial?.prixVente?.toString() ?? "");
@@ -65,6 +83,7 @@ function ProduitModal({
     if (visible) {
       setNom(initial?.nom ?? "");
       setDescription(initial?.description ?? "");
+      setEmoji(initial?.emoji ?? "");
       setCategorie(initial?.categorie ?? "Boissons");
       setPrixAchat(initial?.prixAchat?.toString() ?? "");
       setPrixVente(initial?.prixVente?.toString() ?? "");
@@ -75,7 +94,8 @@ function ProduitModal({
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const body = { nom, description: description || undefined, categorie, prixAchat, prixVente, stock: parseInt(stock) || 0 };
+      const defaultEmoji = CAT_EMOJIS[categorie] ?? "📦";
+      const body = { nom, description: description || undefined, emoji: emoji || defaultEmoji, categorie, prixAchat, prixVente, stock: parseInt(stock) || 0 };
       if (initial) {
         const res = await apiRequest("PUT", `/api/produits/${initial.id}`, body);
         return res.json();
@@ -117,9 +137,21 @@ function ProduitModal({
         <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View style={ms.body}>
             {error ? <View style={ms.errorBox}><Text style={ms.errorText}>{error}</Text></View> : null}
-            <MField label="Nom du produit *">
-              <TextInput style={ms.input} placeholder="Ex: Bière Flag 65cl" placeholderTextColor={Colors.textMuted} value={nom} onChangeText={setNom} />
-            </MField>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <MField label="Emoji (icône)" style={{ width: 90 }}>
+                <TextInput
+                  style={[ms.input, { textAlign: "center", fontSize: 22 }]}
+                  placeholder={CAT_EMOJIS[categorie] ?? "📦"}
+                  placeholderTextColor={Colors.textMuted}
+                  value={emoji}
+                  onChangeText={setEmoji}
+                  maxLength={2}
+                />
+              </MField>
+              <MField label="Nom du produit *" style={{ flex: 1 }}>
+                <TextInput style={ms.input} placeholder="Ex: Bière Flag 65cl" placeholderTextColor={Colors.textMuted} value={nom} onChangeText={setNom} />
+              </MField>
+            </View>
             <MField label="Catégorie">
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={{ flexDirection: "row", gap: 8, paddingVertical: 4 }}>
@@ -300,9 +332,9 @@ function ReapproModal({
   );
 }
 
-function MField({ label, children }: { label: string; children: React.ReactNode }) {
+function MField({ label, children, style }: { label: string; children: React.ReactNode; style?: any }) {
   return (
-    <View style={ms.field}>
+    <View style={[ms.field, style]}>
       <Text style={ms.label}>{label}</Text>
       {children}
     </View>
@@ -405,6 +437,7 @@ export default function InventaireScreen() {
     const marge = Number(item.prixVente) - Number(item.prixAchat);
     const margePercent = Number(item.prixAchat) > 0 ? ((marge / Number(item.prixAchat)) * 100).toFixed(0) : 0;
     const stockBas = item.stock <= 5;
+    const catColor = CAT_COLORS[item.categorie] ?? Colors.primary;
     return (
       <View style={styles.produitCard}>
         <Pressable
@@ -413,8 +446,15 @@ export default function InventaireScreen() {
           onLongPress={() => confirmDelete(item)}
         >
           <View style={styles.produitTop}>
-            <View style={styles.catBadge}>
-              <Text style={styles.catBadgeText}>{item.categorie}</Text>
+            <View style={styles.produitTopLeft}>
+              {item.emoji ? (
+                <View style={[styles.emojiBox, { backgroundColor: catColor + "18" }]}>
+                  <Text style={styles.emojiText}>{item.emoji}</Text>
+                </View>
+              ) : null}
+              <View style={[styles.catBadge, { borderColor: catColor + "50", backgroundColor: catColor + "10" }]}>
+                <Text style={[styles.catBadgeText, { color: catColor }]}>{item.categorie}</Text>
+              </View>
             </View>
             <View style={[styles.stockBadge, stockBas && styles.stockBadgeLow]}>
               <Text style={[styles.stockNum, stockBas && { color: Colors.danger }]}>{item.stock}</Text>
@@ -556,6 +596,9 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: 20, gap: 10 },
   produitCard: { backgroundColor: Colors.surface, borderRadius: 16, padding: 16, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2, gap: 10 },
   produitTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  produitTopLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+  emojiBox: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  emojiText: { fontSize: 18 },
   catBadge: { alignSelf: "flex-start", backgroundColor: Colors.background, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: Colors.border },
   catBadgeText: { fontSize: 11, fontFamily: "Inter_500Medium", color: Colors.textMuted },
   produitNom: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: Colors.text },

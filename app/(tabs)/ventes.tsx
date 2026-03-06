@@ -21,10 +21,19 @@ import Colors from "@/constants/colors";
 interface Produit {
   id: number;
   nom: string;
+  emoji?: string;
   prixVente: string;
   stock: number;
   categorie: string;
 }
+
+const CAT_EMOJIS_V: Record<string, string> = {
+  Boissons: "🥤",
+  Alcools: "🍺",
+  Cocktails: "🍹",
+  Nourriture: "🍽️",
+  Autres: "📦",
+};
 
 interface VenteItem {
   produitId: number;
@@ -147,6 +156,9 @@ function NouvelleVenteModal({
             <Text style={nv.sectionLabel}>Sélectionner les produits</Text>
             {produits.map((p) => (
               <View key={p.id} style={nv.prodRow}>
+                <View style={nv.prodEmoji}>
+                  <Text style={nv.prodEmojiText}>{p.emoji ?? CAT_EMOJIS_V[p.categorie] ?? "📦"}</Text>
+                </View>
                 <View style={nv.prodInfo}>
                   <Text style={nv.prodNom}>{p.nom}</Text>
                   <Text style={nv.prodPrix}>{formatFCFA(p.prixVente)}</Text>
@@ -225,9 +237,11 @@ const nv = StyleSheet.create({
   body: { padding: 20, gap: 4 },
   sectionLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.textMuted, marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 },
   prodRow: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10,
     paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border,
   },
+  prodEmoji: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center" },
+  prodEmojiText: { fontSize: 18 },
   prodInfo: { flex: 1 },
   prodNom: { fontSize: 15, fontFamily: "Inter_500Medium", color: Colors.text },
   prodPrix: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: 2 },
