@@ -29,6 +29,14 @@ function NativeTabLayout() {
         <Icon sf={{ default: "creditcard", selected: "creditcard.fill" }} />
         <Label>Dépenses</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="stock">
+        <Icon sf={{ default: "square.3.layers.3d", selected: "square.2.layers.3d.fill" }} />
+        <Label>Stock</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="historique">
+        <Icon sf={{ default: "chart.line.uptrend.xyaxis", selected: "chart.line.uptrend.xyaxis.circle.fill" }} />
+        <Label>Historique</Label>
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
@@ -105,6 +113,24 @@ function ClassicTabLayout() {
           title: "Dépenses",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="card" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="stock"
+        options={{
+          title: "Stock",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="layers-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="historique"
+        options={{
+          title: "Historique",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="stats-chart" size={size} color={color} />
           ),
         }}
       />

@@ -52,12 +52,6 @@ const CAT_EMOJIS: Record<string, string> = {
   Autres: "📦",
 };
 
-const FOURNISSEURS = [
-  { id: "bb_lome", label: "BB Lomé", icon: "business" as const, color: "#E9A818" },
-  { id: "snb", label: "SNB", icon: "business" as const, color: "#2D6A4F" },
-  { id: "marche", label: "Marché Local", icon: "storefront" as const, color: "#3A86FF" },
-  { id: "autre", label: "Autre", icon: "ellipsis-horizontal-circle" as const, color: "#9CA3AF" },
-];
 
 function formatFCFA(v: string | number) {
   return new Intl.NumberFormat("fr-FR").format(Number(v)) + " FCFA";
@@ -92,7 +86,6 @@ function ProduitModal({
   const [imageMime, setImageMime] = useState<string>("image/jpeg");
   const [uploading, setUploading] = useState(false);
   const [categorie, setCategorie] = useState(initial?.categorie ?? "Boissons");
-  const [prixAchat, setPrixAchat] = useState(initial?.prixAchat?.toString() ?? "");
   const [prixVente, setPrixVente] = useState(initial?.prixVente?.toString() ?? "");
   const [stock, setStock] = useState(initial?.stock?.toString() ?? "0");
   const [error, setError] = useState("");
@@ -107,7 +100,6 @@ function ProduitModal({
       setImageBase64(null);
       setImageMime("image/jpeg");
       setCategorie(initial?.categorie ?? "Boissons");
-      setPrixAchat(initial?.prixAchat?.toString() ?? "");
       setPrixVente(initial?.prixVente?.toString() ?? "");
       setStock(initial?.stock?.toString() ?? "0");
       setError("");
@@ -209,7 +201,6 @@ function ProduitModal({
         image: imageUrl,
         ean: ean.trim() || undefined,
         categorie,
-        prixAchat,
         prixVente,
         stock: parseInt(stock) || 0,
       };
@@ -235,12 +226,12 @@ function ProduitModal({
   });
 
   const handleSave = () => {
-    if (!nom || !prixAchat || !prixVente) {
-      setError("Nom, prix d'achat et prix de vente sont obligatoires");
+    if (!nom || !prixVente) {
+      setError("Nom et prix de vente sont obligatoires");
       return;
     }
-    if (isNaN(Number(prixAchat)) || isNaN(Number(prixVente))) {
-      setError("Les prix doivent être des nombres valides");
+    if (isNaN(Number(prixVente))) {
+      setError("Le prix doit être un nombre valide");
       return;
     }
     setError("");
@@ -343,29 +334,9 @@ function ProduitModal({
             </MField>
 
             {/* ── PRIX ── */}
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <MField label="Prix achat (FCFA) *">
-                  <TextInput style={ms.input} placeholder="500" placeholderTextColor={Colors.textMuted} value={prixAchat} onChangeText={setPrixAchat} keyboardType="numeric" />
-                </MField>
-              </View>
-              <View style={{ flex: 1 }}>
-                <MField label="Prix vente (FCFA) *">
-                  <TextInput style={ms.input} placeholder="800" placeholderTextColor={Colors.textMuted} value={prixVente} onChangeText={setPrixVente} keyboardType="numeric" />
-                </MField>
-              </View>
-            </View>
-
-            {/* ── MARGE PREVIEW ── */}
-            {prixAchat && prixVente && !isNaN(Number(prixAchat)) && !isNaN(Number(prixVente)) && (
-              <View style={ms.margePreview}>
-                <Text style={ms.margeLabel}>Marge brute :</Text>
-                <Text style={[ms.margeValue, { color: Number(prixVente) > Number(prixAchat) ? Colors.success : Colors.danger }]}>
-                  +{(((Number(prixVente) - Number(prixAchat)) / Math.max(Number(prixAchat), 1)) * 100).toFixed(0)}%
-                  {"  "}({formatFCFA(Number(prixVente) - Number(prixAchat))})
-                </Text>
-              </View>
-            )}
+            <MField label="Prix vente (FCFA) *">
+              <TextInput style={ms.input} placeholder="800" placeholderTextColor={Colors.textMuted} value={prixVente} onChangeText={setPrixVente} keyboardType="numeric" />
+            </MField>
 
             <MField label="Stock initial">
               <TextInput style={ms.input} placeholder="0" placeholderTextColor={Colors.textMuted} value={stock} onChangeText={setStock} keyboardType="numeric" />
@@ -390,142 +361,6 @@ function ProduitModal({
   );
 }
 
-// ── MODAL: RÉAPPROVISIONNEMENT ──
-function ReapproModal({
-  visible,
-  onClose,
-  produit,
-}: {
-  visible: boolean;
-  onClose: () => void;
-  produit: Produit | null;
-}) {
-  const qc = useQueryClient();
-  const [quantite, setQuantite] = useState("");
-  const [fournisseur, setFournisseur] = useState("bb_lome");
-  const [error, setError] = useState("");
-
-  React.useEffect(() => {
-    if (visible) { setQuantite(""); setFournisseur("bb_lome"); setError(""); }
-  }, [visible]);
-
-  const mutation = useMutation({
-    mutationFn: async () => {
-      if (!produit) return;
-      const res = await apiRequest("POST", `/api/produits/${produit.id}/reappro`, {
-        quantite: Number(quantite),
-        fournisseur: FOURNISSEURS.find((f) => f.id === fournisseur)?.label ?? "Autre",
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/produits"] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      onClose();
-    },
-    onError: (e: any) => setError(e.message),
-  });
-
-  const handleSave = () => {
-    if (!quantite || isNaN(Number(quantite)) || Number(quantite) <= 0) {
-      setError("Veuillez saisir une quantité valide");
-      return;
-    }
-    setError("");
-    mutation.mutate();
-  };
-
-  if (!produit) return null;
-
-  return (
-    <Modal visible={visible} animationType="slide" presentationStyle="formSheet" onRequestClose={onClose}>
-      <View style={ms.container}>
-        <View style={ms.handle} />
-        <View style={ms.header}>
-          <Text style={ms.title}>Réapprovisionnement</Text>
-          <Pressable onPress={onClose} hitSlop={10}><Ionicons name="close" size={24} color={Colors.textMuted} /></Pressable>
-        </View>
-        <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
-          <View style={ms.body}>
-            <View style={re.prodCard}>
-              {produit.image ? (
-                <Image source={{ uri: getImageUrl(produit.image) }} style={re.prodImg} />
-              ) : (
-                <Text style={{ fontSize: 28 }}>{produit.emoji ?? CAT_EMOJIS[produit.categorie] ?? "📦"}</Text>
-              )}
-              <View style={{ flex: 1 }}>
-                <Text style={re.prodNom}>{produit.nom}</Text>
-                <Text style={re.prodStock}>Stock actuel : <Text style={{ color: produit.stock > 5 ? Colors.success : Colors.danger }}>{produit.stock}</Text></Text>
-              </View>
-            </View>
-
-            {error ? <View style={ms.errorBox}><Text style={ms.errorText}>{error}</Text></View> : null}
-
-            <MField label="Fournisseur">
-              <View style={re.fournGrid}>
-                {FOURNISSEURS.map((f) => (
-                  <Pressable
-                    key={f.id}
-                    style={[re.fournCard, fournisseur === f.id && { borderColor: f.color, backgroundColor: f.color + "15" }]}
-                    onPress={() => setFournisseur(f.id)}
-                  >
-                    <Ionicons name={f.icon} size={22} color={fournisseur === f.id ? f.color : Colors.textMuted} />
-                    <Text style={[re.fournLabel, fournisseur === f.id && { color: f.color }]}>{f.label}</Text>
-                    {fournisseur === f.id && (
-                      <View style={[re.fournCheck, { backgroundColor: f.color }]}>
-                        <Ionicons name="checkmark" size={10} color="#fff" />
-                      </View>
-                    )}
-                  </Pressable>
-                ))}
-              </View>
-            </MField>
-
-            <MField label="Quantité reçue">
-              <View style={re.qtyRow}>
-                <Pressable style={re.qtyBtn} onPress={() => setQuantite((v) => String(Math.max(0, Number(v) - 1)))}>
-                  <Ionicons name="remove" size={20} color={Colors.primary} />
-                </Pressable>
-                <TextInput
-                  style={re.qtyInput}
-                  placeholder="0"
-                  placeholderTextColor={Colors.textMuted}
-                  value={quantite}
-                  onChangeText={setQuantite}
-                  keyboardType="numeric"
-                  textAlign="center"
-                />
-                <Pressable style={re.qtyBtn} onPress={() => { setQuantite((v) => String(Number(v) + 1)); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}>
-                  <Ionicons name="add" size={20} color={Colors.primary} />
-                </Pressable>
-              </View>
-              {Number(quantite) > 0 && (
-                <Text style={re.previewStock}>
-                  Nouveau stock : <Text style={{ fontFamily: "Inter_700Bold", color: Colors.primary }}>{produit.stock + Number(quantite)}</Text>
-                </Text>
-              )}
-            </MField>
-
-            <View style={re.quickBtns}>
-              {[6, 12, 24, 48].map((n) => (
-                <Pressable key={n} style={re.quickBtn} onPress={() => setQuantite(String(n))}>
-                  <Text style={re.quickBtnText}>+{n}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        </ScrollView>
-        <View style={ms.footer}>
-          <Pressable style={({ pressed }) => [re.saveBtn, { opacity: pressed ? 0.85 : 1 }]} onPress={handleSave} disabled={mutation.isPending}>
-            {mutation.isPending ? <ActivityIndicator color="#fff" /> : (
-              <><Ionicons name="arrow-up-circle" size={20} color="#fff" /><Text style={ms.saveBtnText}>Confirmer le stock</Text></>
-            )}
-          </Pressable>
-        </View>
-      </View>
-    </Modal>
-  );
-}
 
 function MField({ label, children, style }: { label: string; children: React.ReactNode; style?: any }) {
   return (
@@ -571,24 +406,6 @@ const ms = StyleSheet.create({
   eanInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.text, paddingVertical: 12, paddingHorizontal: 4 },
 });
 
-const re = StyleSheet.create({
-  prodCard: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: Colors.background, borderRadius: 14, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: Colors.border },
-  prodImg: { width: 48, height: 48, borderRadius: 12 },
-  prodNom: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.text },
-  prodStock: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: 2 },
-  fournGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  fournCard: { flex: 1, minWidth: "45%", flexDirection: "column", alignItems: "center", gap: 6, paddingVertical: 14, paddingHorizontal: 10, borderRadius: 14, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.background, position: "relative" },
-  fournLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.textMuted, textAlign: "center" },
-  fournCheck: { position: "absolute", top: 8, right: 8, width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  qtyRow: { flexDirection: "row", alignItems: "center", gap: 16 },
-  qtyBtn: { width: 44, height: 44, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.primary, alignItems: "center", justifyContent: "center", backgroundColor: Colors.background },
-  qtyInput: { flex: 1, fontSize: 28, fontFamily: "Inter_700Bold", color: Colors.text, backgroundColor: Colors.background, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.border, paddingVertical: 10, textAlign: "center" },
-  previewStock: { marginTop: 8, fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted, textAlign: "center" },
-  quickBtns: { flexDirection: "row", gap: 10, marginTop: 8 },
-  quickBtn: { flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 10, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border },
-  quickBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.primary },
-  saveBtn: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 4 },
-});
 
 const CSV_FORMAT_EXEMPLE = `nom,categorie,ean,prixAchat,prixVente,stock
 Coca-Cola 33cl,Boissons,5449000000996,250,400,24
@@ -797,10 +614,8 @@ export default function InventaireScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const [modalVisible, setModalVisible] = useState(false);
-  const [reapproVisible, setReapproVisible] = useState(false);
   const [csvVisible, setCsvVisible] = useState(false);
   const [editing, setEditing] = useState<Produit | null>(null);
-  const [reapproProduit, setReapproProduit] = useState<Produit | null>(null);
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState<string | null>(null);
 
@@ -847,7 +662,6 @@ export default function InventaireScreen() {
     ]);
   };
 
-  const openReappro = (p: Produit) => { setReapproProduit(p); setReapproVisible(true); };
   const topInsets = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
   const renderItem = ({ item }: { item: Produit }) => {
@@ -888,11 +702,6 @@ export default function InventaireScreen() {
               <Text style={styles.produitNom} numberOfLines={2}>{item.nom}</Text>
               <View style={styles.priceRow}>
                 <View>
-                  <Text style={styles.priceLabel}>Achat</Text>
-                  <Text style={styles.priceAchat}>{formatFCFA(item.prixAchat)}</Text>
-                </View>
-                <View style={styles.priceDivider} />
-                <View>
                   <Text style={styles.priceLabel}>Vente</Text>
                   <Text style={styles.priceVente}>{formatFCFA(item.prixVente)}</Text>
                 </View>
@@ -904,14 +713,6 @@ export default function InventaireScreen() {
               </View>
             </View>
           </View>
-        </Pressable>
-
-        <Pressable
-          style={({ pressed }) => [styles.reapproBtn, { opacity: pressed ? 0.8 : 1 }]}
-          onPress={() => openReappro(item)}
-        >
-          <Ionicons name="arrow-up-circle" size={16} color={Colors.primary} />
-          <Text style={styles.reapproBtnText}>Réappro</Text>
         </Pressable>
       </View>
     );
@@ -1013,7 +814,6 @@ export default function InventaireScreen() {
       )}
 
       <ProduitModal visible={modalVisible} onClose={() => setModalVisible(false)} initial={editing} />
-      <ReapproModal visible={reapproVisible} onClose={() => setReapproVisible(false)} produit={reapproProduit} />
       <ImportCSVModal visible={csvVisible} onClose={() => setCsvVisible(false)} />
     </View>
   );
