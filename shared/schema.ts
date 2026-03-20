@@ -26,6 +26,7 @@ export const produits = pgTable("produits", {
   description: text("description"),
   emoji: text("emoji"),
   image: text("image"),
+  ean: text("ean"),
   categorie: text("categorie").notNull().default("Boissons"),
   prixAchat: numeric("prix_achat", { precision: 12, scale: 2 }).notNull(),
   prixVente: numeric("prix_vente", { precision: 12, scale: 2 }).notNull(),

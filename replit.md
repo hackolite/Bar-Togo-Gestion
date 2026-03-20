@@ -46,6 +46,7 @@ shared/
 - `GET/POST/PUT/DELETE /api/depenses` - Dépenses
 - `GET /api/dashboard` - Statistiques du jour
 - `POST /api/seed/produits` - Charger produits par défaut (si aucun)
+- `POST /api/produits/import-csv` - Importer un catalogue CSV (nom,categorie,ean,prixAchat,prixVente,stock)
 
 ## Photos produits
 - Colonne `image text` dans la table `produits`

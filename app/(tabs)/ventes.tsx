@@ -24,6 +24,7 @@ interface Produit {
   nom: string;
   emoji?: string;
   image?: string;
+  ean?: string;
   prixVente: string;
   stock: number;
   categorie: string;
@@ -87,12 +88,14 @@ function NouvelleVenteModal({
   const [panier, setPanier] = useState<Record<number, number>>({});
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
+  const [prodSearch, setProdSearch] = useState("");
 
   React.useEffect(() => {
     if (visible) {
       setPanier({});
       setNote("");
       setError("");
+      setProdSearch("");
     }
   }, [visible]);
 
@@ -145,6 +148,17 @@ function NouvelleVenteModal({
     mutation.mutate();
   };
 
+  const produitsFiltres = prodSearch.trim()
+    ? produits.filter((p) => {
+        const q = prodSearch.toLowerCase();
+        return (
+          p.nom.toLowerCase().includes(q) ||
+          p.categorie.toLowerCase().includes(q) ||
+          (p.ean && p.ean.toLowerCase().includes(q))
+        );
+      })
+    : produits;
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={nv.container}>
@@ -162,10 +176,39 @@ function NouvelleVenteModal({
           </View>
         ) : null}
 
+        <View style={nv.searchBar}>
+          <Ionicons name="search-outline" size={15} color={Colors.textMuted} />
+          <TextInput
+            style={nv.searchInput}
+            placeholder="Rechercher par nom ou code EAN..."
+            placeholderTextColor={Colors.textMuted}
+            value={prodSearch}
+            onChangeText={setProdSearch}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+            autoCorrect={false}
+          />
+          {prodSearch ? (
+            <Pressable onPress={() => setProdSearch("")} hitSlop={8}>
+              <Ionicons name="close-circle" size={16} color={Colors.textMuted} />
+            </Pressable>
+          ) : null}
+        </View>
+
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={nv.body}>
-            <Text style={nv.sectionLabel}>Sélectionner les produits</Text>
-            {produits.map((p) => {
+            <Text style={nv.sectionLabel}>
+              Sélectionner les produits
+              {prodSearch ? ` · ${produitsFiltres.length} résultat(s)` : ""}
+            </Text>
+            {produitsFiltres.length === 0 && (
+              <View style={nv.emptySearch}>
+                <Ionicons name="search-outline" size={36} color={Colors.textMuted} />
+                <Text style={nv.emptySearchText}>Aucun produit trouvé</Text>
+                <Text style={nv.emptySearchSub}>Essayez un autre terme ou code EAN</Text>
+              </View>
+            )}
+            {produitsFiltres.map((p) => {
               const inPanier = (panier[p.id] ?? 0) > 0;
               return (
                 <Pressable
@@ -306,6 +349,11 @@ const nv = StyleSheet.create({
   },
   validerBtnDisabled: { opacity: 0.5 },
   validerBtnText: { color: "#fff", fontSize: 16, fontFamily: "Inter_700Bold" },
+  searchBar: { flexDirection: "row", alignItems: "center", marginHorizontal: 16, marginBottom: 4, marginTop: 4, backgroundColor: Colors.surface, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, gap: 8, borderWidth: 1, borderColor: Colors.border },
+  searchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.text, padding: 0 },
+  emptySearch: { alignItems: "center", paddingVertical: 36, gap: 10 },
+  emptySearchText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
+  emptySearchSub: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted },
 });
 
 export default function VentesScreen() {

@@ -29,22 +29,22 @@ function requireAuth(req: Request, res: Response, next: Function) {
 
 const PRODUITS_DEFAUT = [
   // ── BOISSONS SOFTS ──
-  { nom: "Coca-Cola 33cl", emoji: "🥤", categorie: "Boissons", prixAchat: "250", prixVente: "400", stock: 50 },
-  { nom: "Coca-Cola 50cl", emoji: "🥤", categorie: "Boissons", prixAchat: "350", prixVente: "500", stock: 50 },
-  { nom: "Fanta Orange 33cl", emoji: "🍊", categorie: "Boissons", prixAchat: "250", prixVente: "400", stock: 48 },
-  { nom: "Fanta Citron 33cl", emoji: "🍋", categorie: "Boissons", prixAchat: "250", prixVente: "400", stock: 36 },
-  { nom: "Sprite 33cl", emoji: "💚", categorie: "Boissons", prixAchat: "250", prixVente: "400", stock: 40 },
+  { nom: "Coca-Cola 33cl", emoji: "🥤", ean: "5449000000996", categorie: "Boissons", prixAchat: "250", prixVente: "400", stock: 50 },
+  { nom: "Coca-Cola 50cl", emoji: "🥤", ean: "5449000014832", categorie: "Boissons", prixAchat: "350", prixVente: "500", stock: 50 },
+  { nom: "Fanta Orange 33cl", emoji: "🍊", ean: "5449000133328", categorie: "Boissons", prixAchat: "250", prixVente: "400", stock: 48 },
+  { nom: "Fanta Citron 33cl", emoji: "🍋", ean: "5449000018502", categorie: "Boissons", prixAchat: "250", prixVente: "400", stock: 36 },
+  { nom: "Sprite 33cl", emoji: "💚", ean: "5449000228949", categorie: "Boissons", prixAchat: "250", prixVente: "400", stock: 40 },
   { nom: "Mirinda Orange 33cl", emoji: "🍊", categorie: "Boissons", prixAchat: "200", prixVente: "350", stock: 30 },
   { nom: "Mirinda Citron 33cl", emoji: "🍋", categorie: "Boissons", prixAchat: "200", prixVente: "350", stock: 30 },
-  { nom: "Pepsi 33cl", emoji: "🥤", categorie: "Boissons", prixAchat: "220", prixVente: "400", stock: 24 },
-  { nom: "7UP 33cl", emoji: "🫧", categorie: "Boissons", prixAchat: "220", prixVente: "400", stock: 24 },
-  { nom: "Malta Guinness 33cl", emoji: "🌾", categorie: "Boissons", prixAchat: "300", prixVente: "500", stock: 36 },
+  { nom: "Pepsi 33cl", emoji: "🥤", ean: "4060800010527", categorie: "Boissons", prixAchat: "220", prixVente: "400", stock: 24 },
+  { nom: "7UP 33cl", emoji: "🫧", ean: "4060800010541", categorie: "Boissons", prixAchat: "220", prixVente: "400", stock: 24 },
+  { nom: "Malta Guinness 33cl", emoji: "🌾", ean: "5011546003729", categorie: "Boissons", prixAchat: "300", prixVente: "500", stock: 36 },
   { nom: "Youki Citrus 33cl", emoji: "🍋", categorie: "Boissons", prixAchat: "200", prixVente: "350", stock: 48 },
   { nom: "Youki Ananas 33cl", emoji: "🍍", categorie: "Boissons", prixAchat: "200", prixVente: "350", stock: 48 },
   { nom: "Youki Pomme 33cl", emoji: "🍏", categorie: "Boissons", prixAchat: "200", prixVente: "350", stock: 36 },
   { nom: "Youki Raisin 33cl", emoji: "🍇", categorie: "Boissons", prixAchat: "200", prixVente: "350", stock: 24 },
-  { nom: "Schweppes Tonic 33cl", emoji: "🫧", categorie: "Boissons", prixAchat: "350", prixVente: "600", stock: 20 },
-  { nom: "Schweppes Citrus 33cl", emoji: "🍋", categorie: "Boissons", prixAchat: "350", prixVente: "600", stock: 20 },
+  { nom: "Schweppes Tonic 33cl", emoji: "🫧", ean: "5449000131324", categorie: "Boissons", prixAchat: "350", prixVente: "600", stock: 20 },
+  { nom: "Schweppes Citrus 33cl", emoji: "🍋", ean: "5449000244079", categorie: "Boissons", prixAchat: "350", prixVente: "600", stock: 20 },
   { nom: "Top Ananas 33cl", emoji: "🍍", categorie: "Boissons", prixAchat: "180", prixVente: "300", stock: 30 },
   { nom: "Top Citron 33cl", emoji: "🍋", categorie: "Boissons", prixAchat: "180", prixVente: "300", stock: 30 },
   // ── EAUX ──
@@ -52,7 +52,7 @@ const PRODUITS_DEFAUT = [
   { nom: "Eau Minérale SBL 1.5L", emoji: "💧", categorie: "Boissons", prixAchat: "350", prixVente: "500", stock: 30 },
   { nom: "Eau Minérale Omi 50cl", emoji: "💧", categorie: "Boissons", prixAchat: "150", prixVente: "250", stock: 60 },
   { nom: "Eau Minérale Omi 1.5L", emoji: "💧", categorie: "Boissons", prixAchat: "350", prixVente: "500", stock: 24 },
-  { nom: "Eau Gazeuse 50cl", emoji: "🫧", categorie: "Boissons", prixAchat: "400", prixVente: "700", stock: 20 },
+  { nom: "Eau Gazeuse 50cl", emoji: "🫧", ean: "3123340012103", categorie: "Boissons", prixAchat: "400", prixVente: "700", stock: 20 },
   // ── JUS MAISON ──
   { nom: "Jus d'Orange (verre)", emoji: "🍊", categorie: "Boissons", prixAchat: "100", prixVente: "500", stock: 0 },
   { nom: "Jus Ananas maison", emoji: "🍍", categorie: "Boissons", prixAchat: "100", prixVente: "500", stock: 0 },
@@ -62,38 +62,38 @@ const PRODUITS_DEFAUT = [
   { nom: "Sobolo maison (verre)", emoji: "🌸", categorie: "Boissons", prixAchat: "80", prixVente: "400", stock: 0 },
   // ── CAFÉS / THÉS ──
   { nom: "Café Expresso", emoji: "☕", categorie: "Boissons", prixAchat: "100", prixVente: "500", stock: 0 },
-  { nom: "Café Nescafé", emoji: "☕", categorie: "Boissons", prixAchat: "100", prixVente: "400", stock: 0 },
+  { nom: "Café Nescafé", emoji: "☕", ean: "7613035443426", categorie: "Boissons", prixAchat: "100", prixVente: "400", stock: 0 },
   { nom: "Thé Vert (sachet)", emoji: "🍵", categorie: "Boissons", prixAchat: "50", prixVente: "300", stock: 20 },
   { nom: "Infusion locale", emoji: "🌿", categorie: "Boissons", prixAchat: "50", prixVente: "300", stock: 0 },
   // ── BIÈRES (BB LOMÉ / SNB) ──
-  { nom: "Flag Spéciale 65cl", emoji: "🍺", categorie: "Alcools", prixAchat: "500", prixVente: "800", stock: 96 },
-  { nom: "Flag Spéciale 33cl", emoji: "🍺", categorie: "Alcools", prixAchat: "300", prixVente: "500", stock: 72 },
-  { nom: "Castel Beer 65cl", emoji: "🍺", categorie: "Alcools", prixAchat: "500", prixVente: "800", stock: 72 },
-  { nom: "Castel Beer 33cl", emoji: "🍺", categorie: "Alcools", prixAchat: "300", prixVente: "500", stock: 48 },
-  { nom: "Guilele 65cl", emoji: "🍺", categorie: "Alcools", prixAchat: "450", prixVente: "750", stock: 60 },
-  { nom: "Guilele 33cl", emoji: "🍺", categorie: "Alcools", prixAchat: "280", prixVente: "500", stock: 48 },
-  { nom: "Awooyo 65cl", emoji: "🍺", categorie: "Alcools", prixAchat: "450", prixVente: "750", stock: 48 },
-  { nom: "33 Export 65cl", emoji: "🍺", categorie: "Alcools", prixAchat: "500", prixVente: "800", stock: 48 },
-  { nom: "Star Beer 65cl", emoji: "⭐", categorie: "Alcools", prixAchat: "500", prixVente: "800", stock: 36 },
+  { nom: "Flag Spéciale 65cl", emoji: "🍺", ean: "6161001007001", categorie: "Alcools", prixAchat: "500", prixVente: "800", stock: 96 },
+  { nom: "Flag Spéciale 33cl", emoji: "🍺", ean: "6161001007002", categorie: "Alcools", prixAchat: "300", prixVente: "500", stock: 72 },
+  { nom: "Castel Beer 65cl", emoji: "🍺", ean: "6161001007003", categorie: "Alcools", prixAchat: "500", prixVente: "800", stock: 72 },
+  { nom: "Castel Beer 33cl", emoji: "🍺", ean: "6161001007004", categorie: "Alcools", prixAchat: "300", prixVente: "500", stock: 48 },
+  { nom: "Guilele 65cl", emoji: "🍺", ean: "6161001007005", categorie: "Alcools", prixAchat: "450", prixVente: "750", stock: 60 },
+  { nom: "Guilele 33cl", emoji: "🍺", ean: "6161001007006", categorie: "Alcools", prixAchat: "280", prixVente: "500", stock: 48 },
+  { nom: "Awooyo 65cl", emoji: "🍺", ean: "6161001007007", categorie: "Alcools", prixAchat: "450", prixVente: "750", stock: 48 },
+  { nom: "33 Export 65cl", emoji: "🍺", ean: "6141030010001", categorie: "Alcools", prixAchat: "500", prixVente: "800", stock: 48 },
+  { nom: "Star Beer 65cl", emoji: "⭐", ean: "6001007054012", categorie: "Alcools", prixAchat: "500", prixVente: "800", stock: 36 },
   { nom: "TCB 65cl", emoji: "🍺", categorie: "Alcools", prixAchat: "500", prixVente: "800", stock: 36 },
   { nom: "Beaufort 65cl", emoji: "🍺", categorie: "Alcools", prixAchat: "500", prixVente: "800", stock: 24 },
-  { nom: "Guinness 50cl", emoji: "🖤", categorie: "Alcools", prixAchat: "600", prixVente: "1000", stock: 36 },
-  { nom: "Heineken 33cl", emoji: "🟢", categorie: "Alcools", prixAchat: "600", prixVente: "1000", stock: 24 },
-  { nom: "Desperados 33cl", emoji: "🍺", categorie: "Alcools", prixAchat: "700", prixVente: "1200", stock: 24 },
-  { nom: "Becks 33cl", emoji: "🍺", categorie: "Alcools", prixAchat: "700", prixVente: "1200", stock: 12 },
-  { nom: "Amstel 33cl", emoji: "🍺", categorie: "Alcools", prixAchat: "600", prixVente: "1000", stock: 12 },
+  { nom: "Guinness 50cl", emoji: "🖤", ean: "5011546602808", categorie: "Alcools", prixAchat: "600", prixVente: "1000", stock: 36 },
+  { nom: "Heineken 33cl", emoji: "🟢", ean: "8714800038448", categorie: "Alcools", prixAchat: "600", prixVente: "1000", stock: 24 },
+  { nom: "Desperados 33cl", emoji: "🍺", ean: "3119780098781", categorie: "Alcools", prixAchat: "700", prixVente: "1200", stock: 24 },
+  { nom: "Becks 33cl", emoji: "🍺", ean: "5010296004095", categorie: "Alcools", prixAchat: "700", prixVente: "1200", stock: 12 },
+  { nom: "Amstel 33cl", emoji: "🍺", ean: "8714800012014", categorie: "Alcools", prixAchat: "600", prixVente: "1000", stock: 12 },
   // ── SPIRITUEUX ──
-  { nom: "Rhum Negrita 4cl", emoji: "🥃", categorie: "Alcools", prixAchat: "200", prixVente: "500", stock: 0 },
+  { nom: "Rhum Negrita 4cl", emoji: "🥃", ean: "3491570001602", categorie: "Alcools", prixAchat: "200", prixVente: "500", stock: 0 },
   { nom: "Rhum Negrita 20cl", emoji: "🥃", categorie: "Alcools", prixAchat: "1500", prixVente: "2500", stock: 6 },
   { nom: "Rhum Diplomatico 4cl", emoji: "🥃", categorie: "Alcools", prixAchat: "500", prixVente: "1500", stock: 0 },
-  { nom: "Whisky JD 4cl", emoji: "🥃", categorie: "Alcools", prixAchat: "800", prixVente: "2000", stock: 0 },
+  { nom: "Whisky JD 4cl", emoji: "🥃", ean: "5099873038765", categorie: "Alcools", prixAchat: "800", prixVente: "2000", stock: 0 },
   { nom: "Whisky JB 4cl", emoji: "🥃", categorie: "Alcools", prixAchat: "600", prixVente: "1500", stock: 0 },
-  { nom: "Whisky Ballantine's 4cl", emoji: "🥃", categorie: "Alcools", prixAchat: "600", prixVente: "1500", stock: 0 },
-  { nom: "Vodka Smirnoff 4cl", emoji: "🍸", categorie: "Alcools", prixAchat: "500", prixVente: "1200", stock: 0 },
-  { nom: "Gordon's Gin 4cl", emoji: "🍸", categorie: "Alcools", prixAchat: "500", prixVente: "1200", stock: 0 },
-  { nom: "Pastis Ricard 4cl", emoji: "🌟", categorie: "Alcools", prixAchat: "400", prixVente: "1000", stock: 0 },
-  { nom: "Campari 4cl", emoji: "🔴", categorie: "Alcools", prixAchat: "500", prixVente: "1200", stock: 0 },
-  { nom: "Baileys 4cl", emoji: "🍮", categorie: "Alcools", prixAchat: "700", prixVente: "1500", stock: 0 },
+  { nom: "Whisky Ballantine's 4cl", emoji: "🥃", ean: "5010106112051", categorie: "Alcools", prixAchat: "600", prixVente: "1500", stock: 0 },
+  { nom: "Vodka Smirnoff 4cl", emoji: "🍸", ean: "5010106061942", categorie: "Alcools", prixAchat: "500", prixVente: "1200", stock: 0 },
+  { nom: "Gordon's Gin 4cl", emoji: "🍸", ean: "5000289925569", categorie: "Alcools", prixAchat: "500", prixVente: "1200", stock: 0 },
+  { nom: "Pastis Ricard 4cl", emoji: "🌟", ean: "3033660006000", categorie: "Alcools", prixAchat: "400", prixVente: "1000", stock: 0 },
+  { nom: "Campari 4cl", emoji: "🔴", ean: "8002230000012", categorie: "Alcools", prixAchat: "500", prixVente: "1200", stock: 0 },
+  { nom: "Baileys 4cl", emoji: "🍮", ean: "5011013100016", categorie: "Alcools", prixAchat: "700", prixVente: "1500", stock: 0 },
   { nom: "Schnapps Apfelkorn 4cl", emoji: "🍏", categorie: "Alcools", prixAchat: "400", prixVente: "800", stock: 0 },
   { nom: "Liqueur Amaretto 4cl", emoji: "🍒", categorie: "Alcools", prixAchat: "500", prixVente: "1200", stock: 0 },
   { nom: "Tequila 4cl", emoji: "🌵", categorie: "Alcools", prixAchat: "600", prixVente: "1500", stock: 0 },
@@ -116,7 +116,7 @@ const PRODUITS_DEFAUT = [
   { nom: "Margarita", emoji: "🍹", categorie: "Cocktails", prixAchat: "600", prixVente: "2500", stock: 0 },
   // ── NOURRITURE ──
   { nom: "Arachides grillées (portion)", emoji: "🥜", categorie: "Nourriture", prixAchat: "100", prixVente: "300", stock: 0 },
-  { nom: "Chips Crunchy", emoji: "🥔", categorie: "Nourriture", prixAchat: "150", prixVente: "300", stock: 30 },
+  { nom: "Chips Crunchy", emoji: "🥔", ean: "6281003019351", categorie: "Nourriture", prixAchat: "150", prixVente: "300", stock: 30 },
   { nom: "Biscuits Salés", emoji: "🍪", categorie: "Nourriture", prixAchat: "100", prixVente: "200", stock: 24 },
   { nom: "Omelette", emoji: "🍳", categorie: "Nourriture", prixAchat: "300", prixVente: "800", stock: 0 },
   { nom: "Brochettes de bœuf (5 pics)", emoji: "🍢", categorie: "Nourriture", prixAchat: "800", prixVente: "2000", stock: 0 },
@@ -137,8 +137,8 @@ const PRODUITS_DEFAUT = [
   { nom: "Salade Niçoise", emoji: "🥗", categorie: "Nourriture", prixAchat: "600", prixVente: "2000", stock: 0 },
   // ── CHICHA / CIGARETTES ──
   { nom: "Chicha / Narguilé (session)", emoji: "💨", categorie: "Autres", prixAchat: "2000", prixVente: "5000", stock: 0 },
-  { nom: "Cigarette Marlboro (unité)", emoji: "🚬", categorie: "Autres", prixAchat: "150", prixVente: "300", stock: 40 },
-  { nom: "Cigarette Dunhill (unité)", emoji: "🚬", categorie: "Autres", prixAchat: "200", prixVente: "400", stock: 20 },
+  { nom: "Cigarette Marlboro (unité)", emoji: "🚬", ean: "4025700002008", categorie: "Autres", prixAchat: "150", prixVente: "300", stock: 40 },
+  { nom: "Cigarette Dunhill (unité)", emoji: "🚬", ean: "5000148019005", categorie: "Autres", prixAchat: "200", prixVente: "400", stock: 20 },
   { nom: "Cigarillo (unité)", emoji: "🚬", categorie: "Autres", prixAchat: "300", prixVente: "600", stock: 10 },
 ];
 
@@ -290,6 +290,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         created.push(prod);
       }
       res.json({ count: created.length, message: `${created.length} produits créés` });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // ── IMPORT CSV PRODUITS ──
+  app.post("/api/produits/import-csv", requireAuth, async (req, res) => {
+    try {
+      const { csvText, skipFirstLine = true } = req.body;
+      if (!csvText) return res.status(400).json({ message: "csvText requis" });
+
+      const lines = csvText.split(/\r?\n/).filter((l: string) => l.trim());
+      const dataLines = skipFirstLine ? lines.slice(1) : lines;
+
+      const created = [];
+      const errors: string[] = [];
+
+      for (let i = 0; i < dataLines.length; i++) {
+        const line = dataLines[i].trim();
+        if (!line) continue;
+        const cols = line.split(",").map((c: string) => c.trim().replace(/^"|"$/g, ""));
+        const [nom, categorie, ean, prixAchat, prixVente, stockStr] = cols;
+        if (!nom || !prixAchat || !prixVente) {
+          errors.push(`Ligne ${i + 2}: nom, prixAchat et prixVente obligatoires`);
+          continue;
+        }
+        if (isNaN(Number(prixAchat)) || isNaN(Number(prixVente))) {
+          errors.push(`Ligne ${i + 2}: prix invalides`);
+          continue;
+        }
+        const VALID_CAT = ["Boissons", "Alcools", "Cocktails", "Nourriture", "Autres"];
+        const cat = VALID_CAT.includes(categorie) ? categorie : "Autres";
+        const prod = await storage.createProduit({
+          nom,
+          categorie: cat,
+          ean: ean || undefined,
+          prixAchat,
+          prixVente,
+          stock: parseInt(stockStr) || 0,
+          userId: req.session.userId!,
+        });
+        created.push(prod);
+      }
+      res.json({ count: created.length, errors, message: `${created.length} produit(s) importé(s)${errors.length ? `, ${errors.length} erreur(s)` : ""}` });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }

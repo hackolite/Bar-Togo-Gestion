@@ -27,6 +27,7 @@ interface Produit {
   description?: string;
   emoji?: string;
   image?: string;
+  ean?: string;
   categorie: string;
   prixAchat: string;
   prixVente: string;
@@ -85,6 +86,7 @@ function ProduitModal({
   const [nom, setNom] = useState(initial?.nom ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [emoji, setEmoji] = useState(initial?.emoji ?? "");
+  const [ean, setEan] = useState(initial?.ean ?? "");
   const [imageUri, setImageUri] = useState<string | null>(initial?.image ?? null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imageMime, setImageMime] = useState<string>("image/jpeg");
@@ -100,6 +102,7 @@ function ProduitModal({
       setNom(initial?.nom ?? "");
       setDescription(initial?.description ?? "");
       setEmoji(initial?.emoji ?? "");
+      setEan(initial?.ean ?? "");
       setImageUri(initial?.image ? getImageUrl(initial.image) : null);
       setImageBase64(null);
       setImageMime("image/jpeg");
@@ -204,6 +207,7 @@ function ProduitModal({
         description: description || undefined,
         emoji: emoji || defaultEmoji,
         image: imageUrl,
+        ean: ean.trim() || undefined,
         categorie,
         prixAchat,
         prixVente,
@@ -302,6 +306,27 @@ function ProduitModal({
                 <TextInput style={ms.input} placeholder="Ex: Bière Flag 65cl" placeholderTextColor={Colors.textMuted} value={nom} onChangeText={setNom} />
               </MField>
             </View>
+
+            {/* ── EAN (CODE-BARRE) ── */}
+            <MField label="Code EAN / Code-barres (optionnel)">
+              <View style={ms.eanRow}>
+                <Ionicons name="barcode-outline" size={18} color={Colors.textMuted} style={{ marginLeft: 12 }} />
+                <TextInput
+                  style={ms.eanInput}
+                  placeholder="Ex: 5449000000996"
+                  placeholderTextColor={Colors.textMuted}
+                  value={ean}
+                  onChangeText={setEan}
+                  keyboardType="number-pad"
+                  maxLength={14}
+                />
+                {ean ? (
+                  <Pressable onPress={() => setEan("")} hitSlop={8} style={{ marginRight: 12 }}>
+                    <Ionicons name="close-circle" size={16} color={Colors.textMuted} />
+                  </Pressable>
+                ) : null}
+              </View>
+            </MField>
 
             {/* ── CATÉGORIE ── */}
             <MField label="Catégorie">
@@ -542,6 +567,8 @@ const ms = StyleSheet.create({
   margePreview: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: Colors.background, borderRadius: 10, borderWidth: 1, borderColor: Colors.border },
   margeLabel: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted },
   margeValue: { fontSize: 13, fontFamily: "Inter_700Bold" },
+  eanRow: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.background, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.border, gap: 8 },
+  eanInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.text, paddingVertical: 12, paddingHorizontal: 4 },
 });
 
 const re = StyleSheet.create({
@@ -563,12 +590,215 @@ const re = StyleSheet.create({
   saveBtn: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 4 },
 });
 
+const CSV_FORMAT_EXEMPLE = `nom,categorie,ean,prixAchat,prixVente,stock
+Coca-Cola 33cl,Boissons,5449000000996,250,400,24
+Flag Spéciale 65cl,Alcools,6161001007001,500,800,48
+Mojito,Cocktails,,500,2000,0
+Brochettes bœuf,Nourriture,,800,2000,0`;
+
+// ── MODAL: IMPORT CSV ──
+function ImportCSVModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [csvText, setCsvText] = useState("");
+  const [skipFirstLine, setSkipFirstLine] = useState(true);
+  const [preview, setPreview] = useState<string[][]>([]);
+  const [result, setResult] = useState<{ count: number; errors: string[] } | null>(null);
+  const [step, setStep] = useState<"edit" | "preview" | "done">("edit");
+
+  React.useEffect(() => {
+    if (visible) {
+      setCsvText("");
+      setPreview([]);
+      setResult(null);
+      setStep("edit");
+    }
+  }, [visible]);
+
+  const parsePreview = () => {
+    const lines = csvText.split(/\r?\n/).filter((l) => l.trim());
+    const dataLines = skipFirstLine ? lines.slice(1) : lines;
+    const parsed = dataLines.slice(0, 10).map((l) =>
+      l.split(",").map((c) => c.trim().replace(/^"|"$/g, ""))
+    );
+    setPreview(parsed);
+    setStep("preview");
+  };
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/produits/import-csv", { csvText, skipFirstLine });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["/api/produits"] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setResult(data);
+      setStep("done");
+    },
+    onError: (e: any) => Alert.alert("Erreur", e.message),
+  });
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="formSheet" onRequestClose={onClose}>
+      <View style={ms.container}>
+        <View style={ms.handle} />
+        <View style={ms.header}>
+          <Text style={ms.title}>Importer un catalogue CSV</Text>
+          <Pressable onPress={onClose} hitSlop={10}><Ionicons name="close" size={24} color={Colors.textMuted} /></Pressable>
+        </View>
+
+        <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <View style={[ms.body, { gap: 16 }]}>
+            {step === "edit" && (
+              <>
+                <View style={csv.formatBox}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                    <Ionicons name="information-circle-outline" size={16} color={Colors.primary} />
+                    <Text style={csv.formatTitle}>Format attendu :</Text>
+                  </View>
+                  <Text style={csv.formatCode}>nom,categorie,ean,prixAchat,prixVente,stock</Text>
+                  <Text style={[csv.formatCode, { color: Colors.textMuted, marginTop: 4 }]}>
+                    Catégories valides :{"\n"}Boissons | Alcools | Cocktails | Nourriture | Autres
+                  </Text>
+                  <Pressable
+                    style={csv.exampleBtn}
+                    onPress={() => setCsvText(CSV_FORMAT_EXEMPLE)}
+                  >
+                    <Ionicons name="flash-outline" size={14} color={Colors.primary} />
+                    <Text style={csv.exampleBtnText}>Charger l'exemple</Text>
+                  </Pressable>
+                </View>
+
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Pressable
+                    style={[csv.toggle, skipFirstLine && csv.toggleActive]}
+                    onPress={() => setSkipFirstLine(!skipFirstLine)}
+                  >
+                    <Ionicons name={skipFirstLine ? "checkbox" : "square-outline"} size={18} color={skipFirstLine ? Colors.primary : Colors.textMuted} />
+                  </Pressable>
+                  <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.text }}>
+                    La 1ère ligne est un en-tête (ignorer)
+                  </Text>
+                </View>
+
+                <MField label="Collez votre CSV ici">
+                  <TextInput
+                    style={csv.textarea}
+                    multiline
+                    value={csvText}
+                    onChangeText={setCsvText}
+                    placeholder={CSV_FORMAT_EXEMPLE}
+                    placeholderTextColor={Colors.textMuted}
+                    textAlignVertical="top"
+                    autoCorrect={false}
+                    autoCapitalize="none"
+                  />
+                </MField>
+              </>
+            )}
+
+            {step === "preview" && (
+              <>
+                <View style={csv.previewHeader}>
+                  <Ionicons name="eye-outline" size={18} color={Colors.primary} />
+                  <Text style={csv.previewTitle}>Aperçu ({preview.length} lignes{preview.length === 10 ? "+" : ""})</Text>
+                </View>
+                {preview.map((row, i) => (
+                  <View key={i} style={csv.previewRow}>
+                    <Text style={csv.previewNom} numberOfLines={1}>{row[0] || "—"}</Text>
+                    <Text style={csv.previewCat}>{row[1] || "—"}</Text>
+                    <Text style={csv.previewPrix}>{row[3] || "0"} / {row[4] || "0"} FCFA</Text>
+                    {row[2] ? <Text style={csv.previewEan}>EAN: {row[2]}</Text> : null}
+                  </View>
+                ))}
+                <Pressable style={csv.backBtn} onPress={() => setStep("edit")}>
+                  <Ionicons name="arrow-back" size={16} color={Colors.textMuted} />
+                  <Text style={csv.backBtnText}>Modifier</Text>
+                </Pressable>
+              </>
+            )}
+
+            {step === "done" && result && (
+              <View style={csv.doneBox}>
+                <Text style={{ fontSize: 48 }}>✅</Text>
+                <Text style={csv.doneTitle}>{result.count} produit(s) importé(s)</Text>
+                {result.errors.length > 0 && (
+                  <View style={csv.errorsBox}>
+                    <Text style={csv.errorsTitle}>{result.errors.length} erreur(s) :</Text>
+                    {result.errors.map((e, i) => <Text key={i} style={csv.errorLine}>{e}</Text>)}
+                  </View>
+                )}
+                <Pressable style={[ms.saveBtn, { marginTop: 12 }]} onPress={onClose}>
+                  <Text style={ms.saveBtnText}>Fermer</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+
+        {step !== "done" && (
+          <View style={ms.footer}>
+            {step === "edit" ? (
+              <Pressable
+                style={({ pressed }) => [ms.saveBtn, { opacity: pressed || !csvText.trim() ? 0.6 : 1 }]}
+                onPress={parsePreview}
+                disabled={!csvText.trim()}
+              >
+                <Ionicons name="eye-outline" size={18} color="#fff" />
+                <Text style={ms.saveBtnText}>Prévisualiser</Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                style={({ pressed }) => [ms.saveBtn, { opacity: pressed ? 0.85 : 1, backgroundColor: "#52B788" }]}
+                onPress={() => mutation.mutate()}
+                disabled={mutation.isPending}
+              >
+                {mutation.isPending ? (
+                  <><ActivityIndicator color="#fff" /><Text style={ms.saveBtnText}>Importation...</Text></>
+                ) : (
+                  <><Ionicons name="cloud-upload-outline" size={18} color="#fff" /><Text style={ms.saveBtnText}>Importer {preview.length} produit(s)</Text></>
+                )}
+              </Pressable>
+            )}
+          </View>
+        )}
+      </View>
+    </Modal>
+  );
+}
+
+const csv = StyleSheet.create({
+  formatBox: { backgroundColor: Colors.primary + "0D", borderRadius: 12, padding: 14, borderWidth: 1, borderColor: Colors.primary + "25" },
+  formatTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.primary },
+  formatCode: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.text, fontVariant: ["tabular-nums"] },
+  exampleBtn: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 10, alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: Colors.primary + "15" },
+  exampleBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: Colors.primary },
+  toggle: { padding: 2 },
+  toggleActive: {},
+  textarea: { backgroundColor: Colors.background, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.border, padding: 14, fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.text, minHeight: 180, maxHeight: 260 },
+  previewHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  previewTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.text },
+  previewRow: { backgroundColor: Colors.background, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: Colors.border, gap: 3 },
+  previewNom: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.text },
+  previewCat: { fontSize: 11, fontFamily: "Inter_500Medium", color: Colors.textMuted },
+  previewPrix: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: Colors.primary },
+  previewEan: { fontSize: 10, fontFamily: "Inter_400Regular", color: Colors.textMuted },
+  backBtn: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start" },
+  backBtnText: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted },
+  doneBox: { alignItems: "center", paddingVertical: 20, gap: 12 },
+  doneTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text },
+  errorsBox: { backgroundColor: "#FEF2F2", borderRadius: 10, padding: 12, width: "100%", gap: 4 },
+  errorsTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.danger },
+  errorLine: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.danger },
+});
+
 // ── ÉCRAN INVENTAIRE ──
 export default function InventaireScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const [modalVisible, setModalVisible] = useState(false);
   const [reapproVisible, setReapproVisible] = useState(false);
+  const [csvVisible, setCsvVisible] = useState(false);
   const [editing, setEditing] = useState<Produit | null>(null);
   const [reapproProduit, setReapproProduit] = useState<Produit | null>(null);
   const [search, setSearch] = useState("");
@@ -601,7 +831,11 @@ export default function InventaireScreen() {
   });
 
   const filtered = produits.filter((p) => {
-    const matchSearch = p.nom.toLowerCase().includes(search.toLowerCase()) || p.categorie.toLowerCase().includes(search.toLowerCase());
+    const q = search.toLowerCase();
+    const matchSearch = !q ||
+      p.nom.toLowerCase().includes(q) ||
+      p.categorie.toLowerCase().includes(q) ||
+      (p.ean && p.ean.includes(q));
     const matchCat = !catFilter || p.categorie === catFilter;
     return matchSearch && matchCat;
   });
@@ -687,15 +921,23 @@ export default function InventaireScreen() {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: topInsets + 16 }]}>
         <View>
-          <Text style={styles.title}>Inventaire</Text>
-          <Text style={styles.subtitle}>{produits.length} produit(s)</Text>
+          <Text style={styles.title}>Catalogue</Text>
+          <Text style={styles.subtitle}>{produits.length} produit(s) · référence</Text>
         </View>
-        <Pressable
-          style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.85 : 1 }]}
-          onPress={() => { setEditing(null); setModalVisible(true); }}
-        >
-          <Ionicons name="add" size={22} color="#fff" />
-        </Pressable>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Pressable
+            style={({ pressed }) => [styles.csvBtn, { opacity: pressed ? 0.85 : 1 }]}
+            onPress={() => setCsvVisible(true)}
+          >
+            <Ionicons name="cloud-upload-outline" size={18} color={Colors.primary} />
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.85 : 1 }]}
+            onPress={() => { setEditing(null); setModalVisible(true); }}
+          >
+            <Ionicons name="add" size={22} color="#fff" />
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.searchRow}>
@@ -772,6 +1014,7 @@ export default function InventaireScreen() {
 
       <ProduitModal visible={modalVisible} onClose={() => setModalVisible(false)} initial={editing} />
       <ReapproModal visible={reapproVisible} onClose={() => setReapproVisible(false)} produit={reapproProduit} />
+      <ImportCSVModal visible={csvVisible} onClose={() => setCsvVisible(false)} />
     </View>
   );
 }
@@ -781,6 +1024,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingBottom: 12, backgroundColor: Colors.background },
   title: { fontSize: 24, fontFamily: "Inter_700Bold", color: Colors.text },
   subtitle: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: 2 },
+  csvBtn: { width: 42, height: 42, borderRadius: 12, backgroundColor: Colors.primary + "15", alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: Colors.primary + "40" },
   addBtn: { width: 42, height: 42, borderRadius: 12, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
   searchRow: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.surface, marginHorizontal: 20, marginBottom: 8, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, gap: 10, borderWidth: 1, borderColor: Colors.border },
   searchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.text, padding: 0 },
