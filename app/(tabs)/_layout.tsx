@@ -15,11 +15,15 @@ function NativeTabLayout() {
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="inventaire">
         <Icon sf={{ default: "cube.box", selected: "cube.box.fill" }} />
-        <Label>Inventaire</Label>
+        <Label>Produits</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="ventes">
         <Icon sf={{ default: "cart", selected: "cart.fill" }} />
         <Label>Ventes</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="achats">
+        <Icon sf={{ default: "shippingbox", selected: "shippingbox.fill" }} />
+        <Label>Achats</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="depenses">
         <Icon sf={{ default: "creditcard", selected: "creditcard.fill" }} />
@@ -71,7 +75,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="inventaire"
         options={{
-          title: "Inventaire",
+          title: "Produits",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="cube" size={size} color={color} />
           ),
@@ -83,6 +87,15 @@ function ClassicTabLayout() {
           title: "Ventes",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="cart" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="achats"
+        options={{
+          title: "Achats",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="cube-outline" size={size} color={color} />
           ),
         }}
       />

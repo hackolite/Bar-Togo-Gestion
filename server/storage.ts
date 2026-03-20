@@ -4,6 +4,7 @@ import {
   ventes,
   venteItems,
   depenses,
+  achatsFournisseurs,
   type User,
   type InsertUser,
   type Produit,
@@ -12,6 +13,8 @@ import {
   type VenteItem,
   type Depense,
   type InsertDepense,
+  type AchatFournisseur,
+  type InsertAchatFournisseur,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, sql, inArray, lt } from "drizzle-orm";
@@ -38,6 +41,10 @@ export interface IStorage {
   createDepense(depense: InsertDepense & { userId: number }): Promise<Depense>;
   updateDepense(id: number, depense: Partial<InsertDepense>): Promise<Depense>;
   deleteDepense(id: number): Promise<void>;
+
+  getAchatsFournisseurs(userId: number): Promise<(AchatFournisseur & { produit: Produit })[]>;
+  createAchatFournisseur(achat: InsertAchatFournisseur & { userId: number }): Promise<AchatFournisseur & { produit: Produit }>;
+  deleteAchatFournisseur(id: number): Promise<void>;
 
   getDashboardStats(userId: number): Promise<{
     ventesAujourdhui: number;
@@ -147,6 +154,41 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDepense(id: number): Promise<void> {
     await db.delete(depenses).where(eq(depenses.id, id));
+  }
+
+  async getAchatsFournisseurs(userId: number): Promise<(AchatFournisseur & { produit: Produit })[]> {
+    const rows = await db
+      .select({ achat: achatsFournisseurs, produit: produits })
+      .from(achatsFournisseurs)
+      .innerJoin(produits, eq(achatsFournisseurs.produitId, produits.id))
+      .where(eq(achatsFournisseurs.userId, userId))
+      .orderBy(desc(achatsFournisseurs.date));
+    return rows.map((r) => ({ ...r.achat, produit: r.produit }));
+  }
+
+  async createAchatFournisseur(
+    achat: InsertAchatFournisseur & { userId: number }
+  ): Promise<AchatFournisseur & { produit: Produit }> {
+    const [a] = await db.insert(achatsFournisseurs).values(achat).returning();
+    // Update stock
+    await db
+      .update(produits)
+      .set({ stock: sql`${produits.stock} + ${achat.quantite}` })
+      .where(eq(produits.id, achat.produitId));
+    const [p] = await db.select().from(produits).where(eq(produits.id, achat.produitId));
+    return { ...a, produit: p };
+  }
+
+  async deleteAchatFournisseur(id: number): Promise<void> {
+    // Restore stock before deletion (clamp to 0 to avoid negative stock)
+    const [achat] = await db.select().from(achatsFournisseurs).where(eq(achatsFournisseurs.id, id));
+    if (achat) {
+      await db
+        .update(produits)
+        .set({ stock: sql`GREATEST(0, ${produits.stock} - ${achat.quantite})` })
+        .where(eq(produits.id, achat.produitId));
+    }
+    await db.delete(achatsFournisseurs).where(eq(achatsFournisseurs.id, id));
   }
 
   async reapprovisionner(id: number, quantite: number, fournisseur: string): Promise<Produit> {

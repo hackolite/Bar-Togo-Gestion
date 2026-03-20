@@ -73,15 +73,33 @@ export const depenses = pgTable("depenses", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const achatsFournisseurs = pgTable("achats_fournisseurs", {
+  id: serial("id").primaryKey(),
+  produitId: integer("produit_id")
+    .references(() => produits.id)
+    .notNull(),
+  quantite: integer("quantite").notNull(),
+  prixUnitaire: numeric("prix_unitaire", { precision: 12, scale: 2 }).notNull(),
+  fournisseur: text("fournisseur").notNull().default("Autre"),
+  date: timestamp("date").notNull().default(sql`now()`),
+  note: text("note"),
+  userId: integer("user_id")
+    .references(() => users.id)
+    .notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   produits: many(produits),
   ventes: many(ventes),
   depenses: many(depenses),
+  achatsFournisseurs: many(achatsFournisseurs),
 }));
 
 export const produitsRelations = relations(produits, ({ one, many }) => ({
   user: one(users, { fields: [produits.userId], references: [users.id] }),
   venteItems: many(venteItems),
+  achatsFournisseurs: many(achatsFournisseurs),
 }));
 
 export const ventesRelations = relations(ventes, ({ one, many }) => ({
@@ -99,6 +117,11 @@ export const venteItemsRelations = relations(venteItems, ({ one }) => ({
 
 export const depensesRelations = relations(depenses, ({ one }) => ({
   user: one(users, { fields: [depenses.userId], references: [users.id] }),
+}));
+
+export const achatsFournisseursRelations = relations(achatsFournisseurs, ({ one }) => ({
+  user: one(users, { fields: [achatsFournisseurs.userId], references: [users.id] }),
+  produit: one(produits, { fields: [achatsFournisseurs.produitId], references: [produits.id] }),
 }));
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -130,12 +153,20 @@ export const insertDepenseSchema = createInsertSchema(depenses).omit({
   createdAt: true,
 });
 
+export const insertAchatFournisseurSchema = createInsertSchema(achatsFournisseurs).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Produit = typeof produits.$inferSelect;
 export type Vente = typeof ventes.$inferSelect;
 export type VenteItem = typeof venteItems.$inferSelect;
 export type Depense = typeof depenses.$inferSelect;
+export type AchatFournisseur = typeof achatsFournisseurs.$inferSelect;
 export type InsertProduit = z.infer<typeof insertProduitSchema>;
 export type InsertVente = z.infer<typeof insertVenteSchema>;
 export type InsertDepense = z.infer<typeof insertDepenseSchema>;
+export type InsertAchatFournisseur = z.infer<typeof insertAchatFournisseurSchema>;

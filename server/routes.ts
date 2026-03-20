@@ -6,6 +6,7 @@ import {
   insertProduitSchema,
   insertVenteSchema,
   insertDepenseSchema,
+  insertAchatFournisseurSchema,
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import session from "express-session";
@@ -379,6 +380,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/depenses/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteDepense(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  // ── ACHATS FOURNISSEURS ──
+  app.get("/api/achats", requireAuth, async (req, res) => {
+    res.json(await storage.getAchatsFournisseurs(req.session.userId!));
+  });
+
+  app.post("/api/achats", requireAuth, async (req, res) => {
+    try {
+      const data = insertAchatFournisseurSchema.parse(req.body);
+      res.json(await storage.createAchatFournisseur({ ...data, userId: req.session.userId! }));
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.delete("/api/achats/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteAchatFournisseur(parseInt(req.params.id));
       res.json({ success: true });
     } catch (e: any) {
       res.status(400).json({ message: e.message });
