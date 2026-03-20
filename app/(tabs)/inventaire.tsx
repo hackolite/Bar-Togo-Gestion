@@ -11,12 +11,14 @@ import {
   ActivityIndicator,
   Platform,
   Alert,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import { apiRequest } from "@/lib/query-client";
+import * as ImagePicker from "expo-image-picker";
+import { apiRequest, getApiUrl } from "@/lib/query-client";
 import Colors from "@/constants/colors";
 
 interface Produit {
@@ -24,6 +26,7 @@ interface Produit {
   nom: string;
   description?: string;
   emoji?: string;
+  image?: string;
   categorie: string;
   prixAchat: string;
   prixVente: string;
@@ -59,6 +62,15 @@ function formatFCFA(v: string | number) {
   return new Intl.NumberFormat("fr-FR").format(Number(v)) + " FCFA";
 }
 
+function getImageUrl(path: string): string {
+  try {
+    const base = getApiUrl();
+    return new URL(path, base).toString();
+  } catch {
+    return path;
+  }
+}
+
 // ── MODAL: NOUVEAU/MODIFIER PRODUIT ──
 function ProduitModal({
   visible,
@@ -73,6 +85,10 @@ function ProduitModal({
   const [nom, setNom] = useState(initial?.nom ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [emoji, setEmoji] = useState(initial?.emoji ?? "");
+  const [imageUri, setImageUri] = useState<string | null>(initial?.image ?? null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [imageMime, setImageMime] = useState<string>("image/jpeg");
+  const [uploading, setUploading] = useState(false);
   const [categorie, setCategorie] = useState(initial?.categorie ?? "Boissons");
   const [prixAchat, setPrixAchat] = useState(initial?.prixAchat?.toString() ?? "");
   const [prixVente, setPrixVente] = useState(initial?.prixVente?.toString() ?? "");
@@ -84,6 +100,9 @@ function ProduitModal({
       setNom(initial?.nom ?? "");
       setDescription(initial?.description ?? "");
       setEmoji(initial?.emoji ?? "");
+      setImageUri(initial?.image ? getImageUrl(initial.image) : null);
+      setImageBase64(null);
+      setImageMime("image/jpeg");
       setCategorie(initial?.categorie ?? "Boissons");
       setPrixAchat(initial?.prixAchat?.toString() ?? "");
       setPrixVente(initial?.prixVente?.toString() ?? "");
@@ -92,10 +111,105 @@ function ProduitModal({
     }
   }, [visible, initial]);
 
+  const pickImage = async () => {
+    try {
+      if (Platform.OS !== "web") {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert("Permission refusée", "L'accès à la galerie est nécessaire pour ajouter une photo.");
+          return;
+        }
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.6,
+        base64: true,
+      });
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setImageUri(asset.uri);
+        setImageBase64(asset.base64 ?? null);
+        const mime = asset.mimeType ?? "image/jpeg";
+        setImageMime(mime);
+      }
+    } catch (e: any) {
+      Alert.alert("Erreur", "Impossible de sélectionner l'image");
+    }
+  };
+
+  const takePhoto = async () => {
+    try {
+      if (Platform.OS !== "web") {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert("Permission refusée", "L'accès à la caméra est nécessaire.");
+          return;
+        }
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.6,
+        base64: true,
+      });
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setImageUri(asset.uri);
+        setImageBase64(asset.base64 ?? null);
+        setImageMime(asset.mimeType ?? "image/jpeg");
+      }
+    } catch (e: any) {
+      Alert.alert("Erreur", "Impossible de prendre la photo");
+    }
+  };
+
+  const showImageOptions = () => {
+    if (Platform.OS === "web") {
+      pickImage();
+      return;
+    }
+    Alert.alert("Photo du produit", "Choisissez une source", [
+      { text: "Galerie", onPress: pickImage },
+      { text: "Appareil photo", onPress: takePhoto },
+      { text: "Supprimer la photo", style: "destructive", onPress: () => { setImageUri(null); setImageBase64(null); } },
+      { text: "Annuler", style: "cancel" },
+    ]);
+  };
+
   const mutation = useMutation({
     mutationFn: async () => {
+      let imageUrl: string | undefined = initial?.image ?? undefined;
+
+      if (imageBase64) {
+        setUploading(true);
+        try {
+          const uploadRes = await apiRequest("POST", "/api/upload", {
+            base64: imageBase64,
+            mimeType: imageMime,
+          });
+          const uploadData = await uploadRes.json();
+          imageUrl = uploadData.url;
+        } finally {
+          setUploading(false);
+        }
+      } else if (!imageUri && initial?.image) {
+        imageUrl = undefined;
+      }
+
       const defaultEmoji = CAT_EMOJIS[categorie] ?? "📦";
-      const body = { nom, description: description || undefined, emoji: emoji || defaultEmoji, categorie, prixAchat, prixVente, stock: parseInt(stock) || 0 };
+      const body = {
+        nom,
+        description: description || undefined,
+        emoji: emoji || defaultEmoji,
+        image: imageUrl,
+        categorie,
+        prixAchat,
+        prixVente,
+        stock: parseInt(stock) || 0,
+      };
+
       if (initial) {
         const res = await apiRequest("PUT", `/api/produits/${initial.id}`, body);
         return res.json();
@@ -110,7 +224,10 @@ function ProduitModal({
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onClose();
     },
-    onError: (e: any) => setError(e.message),
+    onError: (e: any) => {
+      setUploading(false);
+      setError(e.message);
+    },
   });
 
   const handleSave = () => {
@@ -126,6 +243,8 @@ function ProduitModal({
     mutation.mutate();
   };
 
+  const isLoading = mutation.isPending || uploading;
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="formSheet" onRequestClose={onClose}>
       <View style={ms.container}>
@@ -137,10 +256,41 @@ function ProduitModal({
         <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View style={ms.body}>
             {error ? <View style={ms.errorBox}><Text style={ms.errorText}>{error}</Text></View> : null}
+
+            {/* ── PHOTO ── */}
+            <View style={ms.photoSection}>
+              <Pressable style={ms.photoBox} onPress={showImageOptions}>
+                {imageUri ? (
+                  <Image source={{ uri: imageUri }} style={ms.photoPreview} />
+                ) : (
+                  <View style={ms.photoPlaceholder}>
+                    <Text style={{ fontSize: 36 }}>{emoji || CAT_EMOJIS[categorie] || "📷"}</Text>
+                    <View style={ms.photoAddBadge}>
+                      <Ionicons name="camera" size={14} color="#fff" />
+                    </View>
+                  </View>
+                )}
+              </Pressable>
+              <View style={ms.photoActions}>
+                <Pressable style={ms.photoBtn} onPress={showImageOptions}>
+                  <Ionicons name="image-outline" size={16} color={Colors.primary} />
+                  <Text style={ms.photoBtnText}>{imageUri ? "Changer la photo" : "Ajouter une photo"}</Text>
+                </Pressable>
+                {imageUri && (
+                  <Pressable style={[ms.photoBtn, { borderColor: Colors.danger + "60" }]}
+                    onPress={() => { setImageUri(null); setImageBase64(null); }}>
+                    <Ionicons name="trash-outline" size={16} color={Colors.danger} />
+                    <Text style={[ms.photoBtnText, { color: Colors.danger }]}>Supprimer</Text>
+                  </Pressable>
+                )}
+              </View>
+            </View>
+
+            {/* ── EMOJI + NOM ── */}
             <View style={{ flexDirection: "row", gap: 12 }}>
-              <MField label="Emoji (icône)" style={{ width: 90 }}>
+              <MField label="Emoji" style={{ width: 80 }}>
                 <TextInput
-                  style={[ms.input, { textAlign: "center", fontSize: 22 }]}
+                  style={[ms.input, { textAlign: "center", fontSize: 22, paddingVertical: 10 }]}
                   placeholder={CAT_EMOJIS[categorie] ?? "📦"}
                   placeholderTextColor={Colors.textMuted}
                   value={emoji}
@@ -152,17 +302,22 @@ function ProduitModal({
                 <TextInput style={ms.input} placeholder="Ex: Bière Flag 65cl" placeholderTextColor={Colors.textMuted} value={nom} onChangeText={setNom} />
               </MField>
             </View>
+
+            {/* ── CATÉGORIE ── */}
             <MField label="Catégorie">
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={{ flexDirection: "row", gap: 8, paddingVertical: 4 }}>
                   {CATEGORIES.map((c) => (
                     <Pressable key={c} style={[ms.chip, categorie === c && ms.chipActive]} onPress={() => setCategorie(c)}>
+                      <Text style={ms.chipEmoji}>{CAT_EMOJIS[c]}</Text>
                       <Text style={[ms.chipText, categorie === c && ms.chipTextActive]}>{c}</Text>
                     </Pressable>
                   ))}
                 </View>
               </ScrollView>
             </MField>
+
+            {/* ── PRIX ── */}
             <View style={{ flexDirection: "row", gap: 12 }}>
               <View style={{ flex: 1 }}>
                 <MField label="Prix achat (FCFA) *">
@@ -175,17 +330,34 @@ function ProduitModal({
                 </MField>
               </View>
             </View>
+
+            {/* ── MARGE PREVIEW ── */}
+            {prixAchat && prixVente && !isNaN(Number(prixAchat)) && !isNaN(Number(prixVente)) && (
+              <View style={ms.margePreview}>
+                <Text style={ms.margeLabel}>Marge brute :</Text>
+                <Text style={[ms.margeValue, { color: Number(prixVente) > Number(prixAchat) ? Colors.success : Colors.danger }]}>
+                  +{(((Number(prixVente) - Number(prixAchat)) / Math.max(Number(prixAchat), 1)) * 100).toFixed(0)}%
+                  {"  "}({formatFCFA(Number(prixVente) - Number(prixAchat))})
+                </Text>
+              </View>
+            )}
+
             <MField label="Stock initial">
               <TextInput style={ms.input} placeholder="0" placeholderTextColor={Colors.textMuted} value={stock} onChangeText={setStock} keyboardType="numeric" />
             </MField>
+
             <MField label="Description (optionnel)">
-              <TextInput style={[ms.input, { height: 64, textAlignVertical: "top" }]} placeholder="Notes..." placeholderTextColor={Colors.textMuted} value={description} onChangeText={setDescription} multiline />
+              <TextInput style={[ms.input, { height: 64, textAlignVertical: "top" }]} placeholder="Notes, références fournisseur..." placeholderTextColor={Colors.textMuted} value={description} onChangeText={setDescription} multiline />
             </MField>
           </View>
         </ScrollView>
         <View style={ms.footer}>
-          <Pressable style={({ pressed }) => [ms.saveBtn, { opacity: pressed ? 0.85 : 1 }]} onPress={handleSave} disabled={mutation.isPending}>
-            {mutation.isPending ? <ActivityIndicator color="#fff" /> : <Text style={ms.saveBtnText}>{initial ? "Enregistrer" : "Ajouter le produit"}</Text>}
+          <Pressable style={({ pressed }) => [ms.saveBtn, { opacity: pressed ? 0.85 : 1 }]} onPress={handleSave} disabled={isLoading}>
+            {isLoading ? (
+              <><ActivityIndicator color="#fff" /><Text style={ms.saveBtnText}>{uploading ? "Upload photo..." : "Enregistrement..."}</Text></>
+            ) : (
+              <Text style={ms.saveBtnText}>{initial ? "Enregistrer" : "Ajouter le produit"}</Text>
+            )}
           </Pressable>
         </View>
       </View>
@@ -251,7 +423,11 @@ function ReapproModal({
         <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
           <View style={ms.body}>
             <View style={re.prodCard}>
-              <Ionicons name="cube" size={22} color={Colors.primary} />
+              {produit.image ? (
+                <Image source={{ uri: getImageUrl(produit.image) }} style={re.prodImg} />
+              ) : (
+                <Text style={{ fontSize: 28 }}>{produit.emoji ?? CAT_EMOJIS[produit.categorie] ?? "📦"}</Text>
+              )}
               <View style={{ flex: 1 }}>
                 <Text style={re.prodNom}>{produit.nom}</Text>
                 <Text style={re.prodStock}>Stock actuel : <Text style={{ color: produit.stock > 5 ? Colors.success : Colors.danger }}>{produit.stock}</Text></Text>
@@ -282,10 +458,7 @@ function ReapproModal({
 
             <MField label="Quantité reçue">
               <View style={re.qtyRow}>
-                <Pressable
-                  style={re.qtyBtn}
-                  onPress={() => setQuantite((v) => String(Math.max(0, Number(v) - 1)))}
-                >
+                <Pressable style={re.qtyBtn} onPress={() => setQuantite((v) => String(Math.max(0, Number(v) - 1)))}>
                   <Ionicons name="remove" size={20} color={Colors.primary} />
                 </Pressable>
                 <TextInput
@@ -297,10 +470,7 @@ function ReapproModal({
                   keyboardType="numeric"
                   textAlign="center"
                 />
-                <Pressable
-                  style={re.qtyBtn}
-                  onPress={() => { setQuantite((v) => String(Number(v) + 1)); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-                >
+                <Pressable style={re.qtyBtn} onPress={() => { setQuantite((v) => String(Number(v) + 1)); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}>
                   <Ionicons name="add" size={20} color={Colors.primary} />
                 </Pressable>
               </View>
@@ -352,17 +522,31 @@ const ms = StyleSheet.create({
   field: { marginBottom: 16 },
   label: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.text, marginBottom: 8 },
   input: { backgroundColor: Colors.background, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.border, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, fontFamily: "Inter_400Regular", color: Colors.text },
-  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: Colors.background, borderWidth: 1.5, borderColor: Colors.border },
+  chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: Colors.background, borderWidth: 1.5, borderColor: Colors.border },
   chipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  chipEmoji: { fontSize: 14 },
   chipText: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.textMuted },
   chipTextActive: { color: "#fff" },
   footer: { padding: 20, borderTopWidth: 1, borderTopColor: Colors.border },
   saveBtn: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 4 },
   saveBtnText: { color: "#fff", fontSize: 16, fontFamily: "Inter_700Bold" },
+  // Photo
+  photoSection: { flexDirection: "row", alignItems: "center", gap: 16, marginBottom: 20, backgroundColor: Colors.background, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: Colors.border },
+  photoBox: { width: 80, height: 80, borderRadius: 16, overflow: "hidden", position: "relative" },
+  photoPreview: { width: 80, height: 80, borderRadius: 16 },
+  photoPlaceholder: { width: 80, height: 80, borderRadius: 16, backgroundColor: Colors.surface, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: Colors.border, borderStyle: "dashed" },
+  photoAddBadge: { position: "absolute", bottom: 0, right: 0, width: 22, height: 22, borderRadius: 11, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center" },
+  photoActions: { flex: 1, gap: 8 },
+  photoBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1.5, borderColor: Colors.primary + "50", backgroundColor: Colors.primary + "08" },
+  photoBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.primary },
+  margePreview: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: Colors.background, borderRadius: 10, borderWidth: 1, borderColor: Colors.border },
+  margeLabel: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted },
+  margeValue: { fontSize: 13, fontFamily: "Inter_700Bold" },
 });
 
 const re = StyleSheet.create({
   prodCard: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: Colors.background, borderRadius: 14, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: Colors.border },
+  prodImg: { width: 48, height: 48, borderRadius: 12 },
   prodNom: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.text },
   prodStock: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: 2 },
   fournGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
@@ -411,7 +595,7 @@ export default function InventaireScreen() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["/api/produits"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("Produits chargés", `${data.count} produits par défaut ont été ajoutés.`);
+      Alert.alert("Produits chargés ✓", `${data.count} produits typiques d'un bar-restaurant togolais ont été ajoutés.`);
     },
     onError: (e: any) => Alert.alert("Erreur", e.message),
   });
@@ -430,14 +614,15 @@ export default function InventaireScreen() {
   };
 
   const openReappro = (p: Produit) => { setReapproProduit(p); setReapproVisible(true); };
-
   const topInsets = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
   const renderItem = ({ item }: { item: Produit }) => {
     const marge = Number(item.prixVente) - Number(item.prixAchat);
     const margePercent = Number(item.prixAchat) > 0 ? ((marge / Number(item.prixAchat)) * 100).toFixed(0) : 0;
-    const stockBas = item.stock <= 5;
+    const stockBas = item.stock < 10;
     const catColor = CAT_COLORS[item.categorie] ?? Colors.primary;
+    const hasImage = !!item.image;
+
     return (
       <View style={styles.produitCard}>
         <Pressable
@@ -445,40 +630,48 @@ export default function InventaireScreen() {
           onPress={() => { setEditing(item); setModalVisible(true); }}
           onLongPress={() => confirmDelete(item)}
         >
-          <View style={styles.produitTop}>
-            <View style={styles.produitTopLeft}>
-              {item.emoji ? (
-                <View style={[styles.emojiBox, { backgroundColor: catColor + "18" }]}>
-                  <Text style={styles.emojiText}>{item.emoji}</Text>
+          <View style={styles.cardInner}>
+            {/* ── IMAGE / EMOJI ── */}
+            <View style={styles.mediaContainer}>
+              {hasImage ? (
+                <Image source={{ uri: getImageUrl(item.image!) }} style={styles.produitImage} resizeMode="cover" />
+              ) : (
+                <View style={[styles.emojiContainer, { backgroundColor: catColor + "18" }]}>
+                  <Text style={styles.emojiLarge}>{item.emoji ?? CAT_EMOJIS[item.categorie] ?? "📦"}</Text>
                 </View>
-              ) : null}
+              )}
+              {/* Stock badge sur l'image */}
+              <View style={[styles.stockOverlay, { backgroundColor: stockBas ? Colors.danger : Colors.success }]}>
+                <Text style={styles.stockOverlayText}>{item.stock}</Text>
+              </View>
+            </View>
+
+            {/* ── INFO ── */}
+            <View style={styles.infoContainer}>
               <View style={[styles.catBadge, { borderColor: catColor + "50", backgroundColor: catColor + "10" }]}>
                 <Text style={[styles.catBadgeText, { color: catColor }]}>{item.categorie}</Text>
               </View>
-            </View>
-            <View style={[styles.stockBadge, stockBas && styles.stockBadgeLow]}>
-              <Text style={[styles.stockNum, stockBas && { color: Colors.danger }]}>{item.stock}</Text>
-              <Text style={[styles.stockLabel, stockBas && { color: Colors.danger }]}>stock</Text>
-            </View>
-          </View>
-          <Text style={styles.produitNom}>{item.nom}</Text>
-          <View style={styles.priceRow}>
-            <View>
-              <Text style={styles.priceLabel}>Achat</Text>
-              <Text style={styles.priceAchat}>{formatFCFA(item.prixAchat)}</Text>
-            </View>
-            <View style={styles.priceDivider} />
-            <View>
-              <Text style={styles.priceLabel}>Vente</Text>
-              <Text style={styles.priceVente}>{formatFCFA(item.prixVente)}</Text>
-            </View>
-            <View style={styles.priceDivider} />
-            <View>
-              <Text style={styles.priceLabel}>Marge</Text>
-              <Text style={[styles.marge, { color: marge >= 0 ? Colors.success : Colors.danger }]}>+{margePercent}%</Text>
+              <Text style={styles.produitNom} numberOfLines={2}>{item.nom}</Text>
+              <View style={styles.priceRow}>
+                <View>
+                  <Text style={styles.priceLabel}>Achat</Text>
+                  <Text style={styles.priceAchat}>{formatFCFA(item.prixAchat)}</Text>
+                </View>
+                <View style={styles.priceDivider} />
+                <View>
+                  <Text style={styles.priceLabel}>Vente</Text>
+                  <Text style={styles.priceVente}>{formatFCFA(item.prixVente)}</Text>
+                </View>
+                <View style={styles.priceDivider} />
+                <View>
+                  <Text style={styles.priceLabel}>Marge</Text>
+                  <Text style={[styles.marge, { color: marge >= 0 ? Colors.success : Colors.danger }]}>+{margePercent}%</Text>
+                </View>
+              </View>
             </View>
           </View>
         </Pressable>
+
         <Pressable
           style={({ pressed }) => [styles.reapproBtn, { opacity: pressed ? 0.8 : 1 }]}
           onPress={() => openReappro(item)}
@@ -493,15 +686,16 @@ export default function InventaireScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: topInsets + 16 }]}>
-        <Text style={styles.title}>Inventaire</Text>
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <Pressable
-            style={({ pressed }) => [styles.addBtn, styles.addBtnSecondary, { opacity: pressed ? 0.85 : 1 }]}
-            onPress={() => { setEditing(null); setModalVisible(true); }}
-          >
-            <Ionicons name="add" size={22} color={Colors.primary} />
-          </Pressable>
+        <View>
+          <Text style={styles.title}>Inventaire</Text>
+          <Text style={styles.subtitle}>{produits.length} produit(s)</Text>
         </View>
+        <Pressable
+          style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.85 : 1 }]}
+          onPress={() => { setEditing(null); setModalVisible(true); }}
+        >
+          <Ionicons name="add" size={22} color="#fff" />
+        </Pressable>
       </View>
 
       <View style={styles.searchRow}>
@@ -526,6 +720,7 @@ export default function InventaireScreen() {
         </Pressable>
         {CATEGORIES.map((c) => (
           <Pressable key={c} style={[styles.catFilterBtn, catFilter === c && styles.catFilterBtnActive]} onPress={() => setCatFilter(catFilter === c ? null : c)}>
+            <Text style={styles.catFilterEmojiSmall}>{CAT_EMOJIS[c]}</Text>
             <Text style={[styles.catFilterText, catFilter === c && styles.catFilterTextActive]}>{c}</Text>
           </Pressable>
         ))}
@@ -542,32 +737,33 @@ export default function InventaireScreen() {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyBox}>
-              <Ionicons name="cube-outline" size={56} color={Colors.border} />
+              <Text style={{ fontSize: 52 }}>📦</Text>
               <Text style={styles.emptyText}>{search || catFilter ? "Aucun résultat" : "Aucun produit"}</Text>
               {!search && !catFilter && produits.length === 0 && (
-                <Pressable
-                  style={({ pressed }) => [styles.seedBtn, { opacity: pressed ? 0.85 : 1 }]}
-                  onPress={() => {
-                    Alert.alert(
+                <>
+                  <Text style={styles.emptySubText}>Ajoutez vos produits manuellement ou chargez la liste par défaut</Text>
+                  <Pressable
+                    style={({ pressed }) => [styles.seedBtn, { opacity: pressed ? 0.85 : 1 }]}
+                    onPress={() => Alert.alert(
                       "Charger les produits par défaut",
-                      "Cela va ajouter environ 100 produits typiques d'un bar-restaurant togolais. Continuer ?",
+                      "Cela va ajouter ~100 produits typiques d'un bar-restaurant togolais (bières, softs, cocktails, nourriture…).",
                       [
                         { text: "Annuler", style: "cancel" },
                         { text: "Charger", onPress: () => seedMutation.mutate() },
                       ]
-                    );
-                  }}
-                  disabled={seedMutation.isPending}
-                >
-                  {seedMutation.isPending ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <>
-                      <Ionicons name="flash" size={18} color="#fff" />
-                      <Text style={styles.seedBtnText}>Charger les produits par défaut</Text>
-                    </>
-                  )}
-                </Pressable>
+                    )}
+                    disabled={seedMutation.isPending}
+                  >
+                    {seedMutation.isPending ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <>
+                        <Ionicons name="flash" size={18} color="#fff" />
+                        <Text style={styles.seedBtnText}>Charger les produits par défaut</Text>
+                      </>
+                    )}
+                  </Pressable>
+                </>
               )}
             </View>
           }
@@ -584,39 +780,42 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingBottom: 12, backgroundColor: Colors.background },
   title: { fontSize: 24, fontFamily: "Inter_700Bold", color: Colors.text },
-  addBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
-  addBtnSecondary: { backgroundColor: Colors.surface, borderWidth: 1.5, borderColor: Colors.border, shadowOpacity: 0 },
+  subtitle: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: 2 },
+  addBtn: { width: 42, height: 42, borderRadius: 12, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
   searchRow: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.surface, marginHorizontal: 20, marginBottom: 8, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, gap: 10, borderWidth: 1, borderColor: Colors.border },
   searchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.text, padding: 0 },
   catRow: { marginBottom: 12 },
-  catFilterBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: Colors.surface, borderWidth: 1.5, borderColor: Colors.border },
+  catFilterBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: Colors.surface, borderWidth: 1.5, borderColor: Colors.border },
   catFilterBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  catFilterText: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.textMuted },
+  catFilterText: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.textMuted },
   catFilterTextActive: { color: "#fff" },
-  list: { paddingHorizontal: 20, gap: 10 },
-  produitCard: { backgroundColor: Colors.surface, borderRadius: 16, padding: 16, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2, gap: 10 },
-  produitTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  produitTopLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
-  emojiBox: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  emojiText: { fontSize: 18 },
-  catBadge: { alignSelf: "flex-start", backgroundColor: Colors.background, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: Colors.border },
-  catBadgeText: { fontSize: 11, fontFamily: "Inter_500Medium", color: Colors.textMuted },
-  produitNom: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: Colors.text },
-  priceRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  priceDivider: { width: 1, height: 24, backgroundColor: Colors.border },
-  priceLabel: { fontSize: 10, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginBottom: 2 },
-  priceAchat: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
-  priceVente: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: Colors.primary },
-  marge: { fontSize: 12, fontFamily: "Inter_700Bold" },
-  stockBadge: { alignItems: "center", justifyContent: "center", backgroundColor: Colors.background, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: Colors.border },
-  stockBadgeLow: { borderColor: Colors.danger + "60", backgroundColor: Colors.danger + "10" },
-  stockNum: { fontSize: 16, fontFamily: "Inter_700Bold", color: Colors.text },
-  stockLabel: { fontSize: 9, fontFamily: "Inter_400Regular", color: Colors.textMuted },
-  reapproBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 9, borderRadius: 10, borderWidth: 1.5, borderColor: Colors.primary + "60", backgroundColor: Colors.primary + "08" },
+  catFilterEmojiSmall: { fontSize: 13 },
+  list: { paddingHorizontal: 16, gap: 12 },
+  // ── CARD ──
+  produitCard: { backgroundColor: Colors.surface, borderRadius: 18, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 10, elevation: 2 },
+  cardInner: { flexDirection: "row", gap: 0 },
+  mediaContainer: { width: 90, position: "relative" },
+  produitImage: { width: 90, height: 90 },
+  emojiContainer: { width: 90, height: 90, alignItems: "center", justifyContent: "center" },
+  emojiLarge: { fontSize: 36 },
+  stockOverlay: { position: "absolute", bottom: 6, right: 6, minWidth: 26, height: 22, borderRadius: 11, paddingHorizontal: 6, alignItems: "center", justifyContent: "center" },
+  stockOverlayText: { fontSize: 11, fontFamily: "Inter_700Bold", color: "#fff" },
+  infoContainer: { flex: 1, padding: 12, gap: 6, justifyContent: "center" },
+  catBadge: { alignSelf: "flex-start", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
+  catBadgeText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
+  produitNom: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.text, lineHeight: 20 },
+  priceRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  priceDivider: { width: 1, height: 20, backgroundColor: Colors.border },
+  priceLabel: { fontSize: 9, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginBottom: 1 },
+  priceAchat: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
+  priceVente: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: Colors.primary },
+  marge: { fontSize: 11, fontFamily: "Inter_700Bold" },
+  reapproBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderTopWidth: 1, borderTopColor: Colors.border, backgroundColor: Colors.primary + "06" },
   reapproBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.primary },
   loadingBox: { flex: 1, alignItems: "center", justifyContent: "center" },
-  emptyBox: { alignItems: "center", paddingTop: 60, gap: 14 },
+  emptyBox: { alignItems: "center", paddingTop: 60, gap: 12, paddingHorizontal: 20 },
   emptyText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
+  emptySubText: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted, textAlign: "center", lineHeight: 20 },
   seedBtn: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 24, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 4, marginTop: 8 },
   seedBtnText: { color: "#fff", fontSize: 14, fontFamily: "Inter_700Bold" },
 });

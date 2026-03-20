@@ -15,10 +15,15 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.myapp"
+      "bundleIdentifier": "com.myapp",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "BarGest utilise la galerie pour ajouter des photos aux produits.",
+        "NSCameraUsageDescription": "BarGest utilise la caméra pour photographier les produits."
+      }
     },
     "android": {
       "package": "com.myapp",
+      "permissions": ["android.permission.CAMERA", "android.permission.READ_MEDIA_IMAGES", "android.permission.READ_EXTERNAL_STORAGE"],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

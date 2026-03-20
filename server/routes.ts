@@ -11,6 +11,8 @@ import bcrypt from "bcryptjs";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
+import * as fs from "fs";
+import * as path from "path";
 
 declare module "express-session" {
   interface SessionData {
@@ -193,6 +195,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const user = await storage.getUser(req.session.userId);
     if (!user) return res.status(401).json({ message: "Utilisateur introuvable" });
     res.json({ id: user.id, email: user.email, nom: user.nom });
+  });
+
+  // ── UPLOAD IMAGE ──
+  app.post("/api/upload", requireAuth, async (req, res) => {
+    try {
+      const { base64, mimeType } = req.body;
+      if (!base64 || !mimeType) {
+        return res.status(400).json({ message: "base64 et mimeType requis" });
+      }
+      const ext = mimeType === "image/png" ? "png" : "jpg";
+      const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
+      const uploadsDir = path.resolve(process.cwd(), "uploads");
+      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+      const filePath = path.join(uploadsDir, filename);
+      const buffer = Buffer.from(base64, "base64");
+      fs.writeFileSync(filePath, buffer);
+      res.json({ url: `/uploads/${filename}` });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
   });
 
   // ── DASHBOARD ──

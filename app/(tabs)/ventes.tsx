@@ -10,21 +10,32 @@ import {
   ActivityIndicator,
   Platform,
   TextInput,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import { apiRequest } from "@/lib/query-client";
+import { apiRequest, getApiUrl } from "@/lib/query-client";
 import Colors from "@/constants/colors";
 
 interface Produit {
   id: number;
   nom: string;
   emoji?: string;
+  image?: string;
   prixVente: string;
   stock: number;
   categorie: string;
+}
+
+function getImageUrl(path: string): string {
+  try {
+    const base = getApiUrl();
+    return new URL(path, base).toString();
+  } catch {
+    return path;
+  }
 }
 
 const CAT_EMOJIS_V: Record<string, string> = {
@@ -154,30 +165,46 @@ function NouvelleVenteModal({
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={nv.body}>
             <Text style={nv.sectionLabel}>Sélectionner les produits</Text>
-            {produits.map((p) => (
-              <View key={p.id} style={nv.prodRow}>
-                <View style={nv.prodEmoji}>
-                  <Text style={nv.prodEmojiText}>{p.emoji ?? CAT_EMOJIS_V[p.categorie] ?? "📦"}</Text>
-                </View>
-                <View style={nv.prodInfo}>
-                  <Text style={nv.prodNom}>{p.nom}</Text>
-                  <Text style={nv.prodPrix}>{formatFCFA(p.prixVente)}</Text>
-                </View>
-                <View style={nv.counter}>
-                  <Pressable
-                    style={[nv.counterBtn, !(panier[p.id] > 0) && nv.counterBtnDisabled]}
-                    onPress={() => decrementer(p.id)}
-                    disabled={!(panier[p.id] > 0)}
-                  >
-                    <Ionicons name="remove" size={16} color={panier[p.id] > 0 ? Colors.primary : Colors.textMuted} />
-                  </Pressable>
-                  <Text style={nv.counterQty}>{panier[p.id] ?? 0}</Text>
-                  <Pressable style={nv.counterBtn} onPress={() => incrementer(p.id)}>
-                    <Ionicons name="add" size={16} color={Colors.primary} />
-                  </Pressable>
-                </View>
-              </View>
-            ))}
+            {produits.map((p) => {
+              const inPanier = (panier[p.id] ?? 0) > 0;
+              return (
+                <Pressable
+                  key={p.id}
+                  style={[nv.prodRow, inPanier && nv.prodRowActive]}
+                  onPress={() => incrementer(p.id)}
+                >
+                  <View style={nv.prodThumb}>
+                    {p.image ? (
+                      <Image source={{ uri: getImageUrl(p.image) }} style={nv.prodImg} resizeMode="cover" />
+                    ) : (
+                      <Text style={nv.prodEmojiText}>{p.emoji ?? CAT_EMOJIS_V[p.categorie] ?? "📦"}</Text>
+                    )}
+                    {p.stock < 10 && (
+                      <View style={nv.stockWarn}>
+                        <Text style={nv.stockWarnText}>{p.stock}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={nv.prodInfo}>
+                    <Text style={nv.prodNom} numberOfLines={2}>{p.nom}</Text>
+                    <Text style={nv.prodPrix}>{formatFCFA(p.prixVente)}</Text>
+                  </View>
+                  <View style={nv.counter}>
+                    <Pressable
+                      style={[nv.counterBtn, !(panier[p.id] > 0) && nv.counterBtnDisabled]}
+                      onPress={(e) => { e.stopPropagation?.(); decrementer(p.id); }}
+                      disabled={!(panier[p.id] > 0)}
+                    >
+                      <Ionicons name="remove" size={16} color={panier[p.id] > 0 ? Colors.primary : Colors.textMuted} />
+                    </Pressable>
+                    <Text style={nv.counterQty}>{panier[p.id] ?? 0}</Text>
+                    <Pressable style={nv.counterBtn} onPress={(e) => { e.stopPropagation?.(); incrementer(p.id); }}>
+                      <Ionicons name="add" size={16} color={Colors.primary} />
+                    </Pressable>
+                  </View>
+                </Pressable>
+              );
+            })}
 
             <Text style={[nv.sectionLabel, { marginTop: 16 }]}>Note (optionnel)</Text>
             <TextInput
@@ -237,14 +264,19 @@ const nv = StyleSheet.create({
   body: { padding: 20, gap: 4 },
   sectionLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.textMuted, marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 },
   prodRow: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10,
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12,
+    paddingVertical: 10, paddingHorizontal: 8, borderRadius: 12, marginBottom: 4,
+    borderWidth: 1.5, borderColor: "transparent",
   },
-  prodEmoji: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center" },
-  prodEmojiText: { fontSize: 18 },
+  prodRowActive: { backgroundColor: Colors.primary + "08", borderColor: Colors.primary + "30" },
+  prodThumb: { width: 44, height: 44, borderRadius: 12, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" },
+  prodImg: { width: 44, height: 44, borderRadius: 12 },
+  prodEmojiText: { fontSize: 22 },
+  stockWarn: { position: "absolute", bottom: 0, right: 0, backgroundColor: Colors.danger, width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  stockWarnText: { fontSize: 9, fontFamily: "Inter_700Bold", color: "#fff" },
   prodInfo: { flex: 1 },
-  prodNom: { fontSize: 15, fontFamily: "Inter_500Medium", color: Colors.text },
-  prodPrix: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: 2 },
+  prodNom: { fontSize: 14, fontFamily: "Inter_500Medium", color: Colors.text, lineHeight: 20 },
+  prodPrix: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: Colors.primary, marginTop: 2 },
   counter: { flexDirection: "row", alignItems: "center", gap: 12 },
   counterBtn: {
     width: 32, height: 32, borderRadius: 10,

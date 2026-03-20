@@ -39,10 +39,20 @@ shared/
 - `POST /api/auth/login` - Connexion
 - `POST /api/auth/logout` - Déconnexion
 - `GET /api/auth/me` - Utilisateur courant
-- `GET/POST/PUT/DELETE /api/produits` - CRUD produits
+- `GET/POST/PUT/DELETE /api/produits` - CRUD produits (avec image)
+- `POST /api/produits/:id/reappro` - Réapprovisionnement stock
+- `POST /api/upload` - Upload image (base64 → fichier, retourne `/uploads/filename.ext`)
 - `GET/POST /api/ventes` - Ventes
 - `GET/POST/PUT/DELETE /api/depenses` - Dépenses
 - `GET /api/dashboard` - Statistiques du jour
+- `POST /api/seed/produits` - Charger produits par défaut (si aucun)
+
+## Photos produits
+- Colonne `image text` dans la table `produits`
+- Upload base64 via `POST /api/upload` → fichiers stockés dans `/uploads/`
+- Express sert `/uploads/` en statique
+- `expo-image-picker` avec permissions iOS/Android configurées dans `app.json`
+- Affichage dans l'inventaire (carte produit avec image 90×90) et dans la modale de vente
 
 ## Thème & Design
 - Palette: vert forêt (#2D6A4F), amber (#E9A818), fond clair (#F4F7F5)
