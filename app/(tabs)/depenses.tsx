@@ -29,7 +29,6 @@ interface Depense {
 }
 
 const CATEGORIES_DEPENSE = [
-  { id: "Achats Fournisseurs", label: "Achats Fournisseurs", icon: "cube" as const, color: Colors.primary, desc: "BB Lomé, SNB, marché..." },
   { id: "Salaires", label: "Salaires", icon: "people" as const, color: "#8B5CF6", desc: "Personnel, employés" },
   { id: "Loyer", label: "Loyer", icon: "home" as const, color: "#F97316", desc: "Location des locaux" },
   { id: "Électricité (CEET)", label: "Électricité (CEET)", icon: "flash" as const, color: Colors.accent, desc: "Facture CEET" },
@@ -67,7 +66,7 @@ function DepenseModal({
   const qc = useQueryClient();
   const [libelle, setLibelle] = useState(initial?.libelle ?? "");
   const [montant, setMontant] = useState(initial?.montant?.toString() ?? "");
-  const [categorie, setCategorie] = useState(initial?.categorie ?? "Achats Fournisseurs");
+  const [categorie, setCategorie] = useState(initial?.categorie ?? "Général");
   const [note, setNote] = useState(initial?.note ?? "");
   const [error, setError] = useState("");
 
@@ -75,7 +74,7 @@ function DepenseModal({
     if (visible) {
       setLibelle(initial?.libelle ?? "");
       setMontant(initial?.montant?.toString() ?? "");
-      setCategorie(initial?.categorie ?? "Achats Fournisseurs");
+      setCategorie(initial?.categorie ?? "Général");
       setNote(initial?.note ?? "");
       setError("");
     }
@@ -154,7 +153,7 @@ function DepenseModal({
               <Text style={dm.label}>Libellé *</Text>
               <TextInput
                 style={dm.input}
-                placeholder={categorie === "Achats Fournisseurs" ? "Ex: Achat bières BB Lomé" : categorie === "Salaires" ? "Ex: Salaire barman juillet" : "Décrire la dépense..."}
+                placeholder={categorie === "Salaires" ? "Ex: Salaire barman juillet" : "Décrire la dépense..."}
                 placeholderTextColor={Colors.textMuted}
                 value={libelle}
                 onChangeText={setLibelle}
