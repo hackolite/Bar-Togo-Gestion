@@ -38,4 +38,7 @@ yarn-error.*
 *.tsbuildinfo
 .vercel
 
+# Server build artifacts
+server_dist/
+
 .env
