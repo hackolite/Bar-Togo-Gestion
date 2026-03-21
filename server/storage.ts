@@ -320,7 +320,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(ventes)
       .innerJoin(venteItems, eq(venteItems.venteId, ventes.id))
-      .innerJoin(produits, eq(venteItems.produitId, produits.id))
+      .leftJoin(produits, eq(venteItems.produitId, produits.id))
       .where(eq(ventes.userId, userId))
       .groupBy(ventes.id, ventes.date)
       .orderBy(desc(ventes.date));
