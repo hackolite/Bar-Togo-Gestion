@@ -35,7 +35,7 @@ function NativeTabLayout() {
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="historique">
         <Icon sf={{ default: "chart.line.uptrend.xyaxis", selected: "chart.line.uptrend.xyaxis.circle.fill" }} />
-        <Label>Historique</Label>
+        <Label>Analytiques</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -128,7 +128,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="historique"
         options={{
-          title: "Historique",
+          title: "Analytiques",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="stats-chart" size={size} color={color} />
           ),
