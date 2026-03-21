@@ -11,7 +11,9 @@ import {
 import bcrypt from "bcryptjs";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
-import { pool } from "./db";
+import { pool, db } from "./db";
+import { ventes, venteItems, achatsFournisseurs, produits } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -406,6 +408,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (e: any) {
       res.status(400).json({ message: e.message });
+    }
+  });
+
+  // ── IMPORT CSV VENTES ──
+  app.post("/api/ventes/import-csv", requireAuth, async (req, res) => {
+    try {
+      const { csvText, skipFirstLine = true } = req.body;
+      if (!csvText) return res.status(400).json({ message: "csvText requis" });
+
+      const lines = (csvText as string).split(/\r?\n/).filter((l: string) => l.trim());
+      const dataLines = skipFirstLine ? lines.slice(1) : lines;
+
+      const userProduits = await storage.getProduits(req.session.userId!);
+      const created: { id: number }[] = [];
+      const errors: string[] = [];
+
+      for (let i = 0; i < dataLines.length; i++) {
+        const line = dataLines[i].trim();
+        if (!line) continue;
+        const cols = line.split(",").map((c: string) => c.trim().replace(/^"|"$/g, ""));
+        const [dateStr, produitNom, quantiteStr, prixStr, note] = cols;
+
+        if (!produitNom || !quantiteStr || !prixStr) {
+          errors.push(`Ligne ${i + 2}: produit, quantite et prixUnitaire obligatoires`);
+          continue;
+        }
+        const produit = userProduits.find(
+          (p) => p.nom.toLowerCase() === produitNom.toLowerCase()
+        );
+        if (!produit) {
+          errors.push(`Ligne ${i + 2}: produit "${produitNom}" introuvable`);
+          continue;
+        }
+        const quantite = parseInt(quantiteStr);
+        const prixUnitaire = Number(prixStr);
+        if (isNaN(quantite) || quantite < 1) {
+          errors.push(`Ligne ${i + 2}: quantité invalide`);
+          continue;
+        }
+        if (isNaN(prixUnitaire) || prixUnitaire < 0) {
+          errors.push(`Ligne ${i + 2}: prix invalide`);
+          continue;
+        }
+        const date = dateStr ? new Date(dateStr) : new Date();
+        if (isNaN(date.getTime())) {
+          errors.push(`Ligne ${i + 2}: date invalide (format YYYY-MM-DD attendu)`);
+          continue;
+        }
+        const total = quantite * prixUnitaire;
+        const [v] = await db
+          .insert(ventes)
+          .values({ userId: req.session.userId!, total: total.toString(), note: note || undefined, date })
+          .returning();
+        await db.insert(venteItems).values({
+          venteId: v.id,
+          produitId: produit.id,
+          quantite,
+          prixUnitaire: prixUnitaire.toString(),
+        });
+        created.push(v);
+      }
+      res.json({
+        count: created.length,
+        errors,
+        message: `${created.length} vente(s) importée(s)${errors.length ? `, ${errors.length} erreur(s)` : ""}`,
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // ── IMPORT CSV ACHATS ──
+  app.post("/api/achats/import-csv", requireAuth, async (req, res) => {
+    try {
+      const { csvText, skipFirstLine = true } = req.body;
+      if (!csvText) return res.status(400).json({ message: "csvText requis" });
+
+      const lines = (csvText as string).split(/\r?\n/).filter((l: string) => l.trim());
+      const dataLines = skipFirstLine ? lines.slice(1) : lines;
+
+      const userProduits = await storage.getProduits(req.session.userId!);
+      const created: { id: number }[] = [];
+      const errors: string[] = [];
+
+      for (let i = 0; i < dataLines.length; i++) {
+        const line = dataLines[i].trim();
+        if (!line) continue;
+        const cols = line.split(",").map((c: string) => c.trim().replace(/^"|"$/g, ""));
+        const [dateStr, produitNom, quantiteStr, prixStr, fournisseur, note] = cols;
+
+        if (!produitNom || !quantiteStr || !prixStr) {
+          errors.push(`Ligne ${i + 2}: produit, quantite et prixUnitaire obligatoires`);
+          continue;
+        }
+        const produit = userProduits.find(
+          (p) => p.nom.toLowerCase() === produitNom.toLowerCase()
+        );
+        if (!produit) {
+          errors.push(`Ligne ${i + 2}: produit "${produitNom}" introuvable`);
+          continue;
+        }
+        const quantite = parseInt(quantiteStr);
+        const prixUnitaire = Number(prixStr);
+        if (isNaN(quantite) || quantite < 1) {
+          errors.push(`Ligne ${i + 2}: quantité invalide`);
+          continue;
+        }
+        if (isNaN(prixUnitaire) || prixUnitaire < 0) {
+          errors.push(`Ligne ${i + 2}: prix invalide`);
+          continue;
+        }
+        const date = dateStr ? new Date(dateStr) : new Date();
+        if (isNaN(date.getTime())) {
+          errors.push(`Ligne ${i + 2}: date invalide (format YYYY-MM-DD attendu)`);
+          continue;
+        }
+        const [a] = await db
+          .insert(achatsFournisseurs)
+          .values({
+            userId: req.session.userId!,
+            produitId: produit.id,
+            quantite,
+            prixUnitaire: prixUnitaire.toString(),
+            fournisseur: fournisseur || "Autre",
+            note: note || undefined,
+            date,
+          })
+          .returning();
+        created.push(a);
+      }
+      res.json({
+        count: created.length,
+        errors,
+        message: `${created.length} achat(s) importé(s)${errors.length ? `, ${errors.length} erreur(s)` : ""}`,
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
     }
   });
 

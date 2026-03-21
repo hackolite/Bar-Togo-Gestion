@@ -47,6 +47,9 @@ interface Produit {
 
 type Tab = "ventes" | "achats" | "stock";
 
+/** Display a date label every N days in the 30-day bar chart */
+const LABEL_EVERY_N_DAYS = 5;
+
 function formatFCFA(v: string | number) {
   return new Intl.NumberFormat("fr-FR").format(Number(v)) + " FCFA";
 }
@@ -161,20 +164,24 @@ function StatsRow({
   avg,
   count,
   color,
+  totalLabel = "Total 7 jours",
+  avgLabel = "Moyenne/jour",
 }: {
   total: number;
   avg: number;
   count: number;
   color: string;
+  totalLabel?: string;
+  avgLabel?: string;
 }) {
   return (
     <View style={styles.statsRow}>
       <View style={styles.statCard}>
-        <Text style={styles.statLabel}>Total 7 jours</Text>
+        <Text style={styles.statLabel}>{totalLabel}</Text>
         <Text style={[styles.statValue, { color }]}>{formatFCFA(total)}</Text>
       </View>
       <View style={styles.statCard}>
-        <Text style={styles.statLabel}>Moyenne/jour</Text>
+        <Text style={styles.statLabel}>{avgLabel}</Text>
         <Text style={[styles.statValue, { color }]}>{formatFCFA(Math.round(avg))}</Text>
       </View>
       <View style={styles.statCard}>
@@ -185,10 +192,28 @@ function StatsRow({
   );
 }
 
+type Period = "7j" | "30j" | "annee";
+
+const MONTH_LABELS = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
+
+function getLast30Days(): string[] {
+  const days: string[] = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().split("T")[0]);
+  }
+  return days;
+}
+
 export default function HistoriqueScreen() {
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<Tab>("ventes");
-  const days = getLast7Days();
+  const [period, setPeriod] = useState<Period>("7j");
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [produitFilterId, setProduitFilterId] = useState<number | null>(null);
+  const days7 = getLast7Days();
+  const days30 = getLast30Days();
 
   const { data: ventes = [], isLoading: loadingVentes } = useQuery<Vente[]>({
     queryKey: ["/api/ventes"],
@@ -214,20 +239,22 @@ export default function HistoriqueScreen() {
     },
   });
 
-  // ── VENTES DATA ──
-  const ventesChartData = days.map((day) => {
-    const dayVentes = ventes.filter((v) => isSameDay(v.date, day));
-    const total = dayVentes.reduce((s, v) => s + Number(v.total), 0);
-    return { label: formatDayLabel(day), value: Math.round(total), count: dayVentes.length };
-  });
+  // ── AVAILABLE YEARS ──
+  const availableYears = React.useMemo(() => {
+    const years = new Set<number>();
+    ventes.forEach((v) => years.add(new Date(v.date).getFullYear()));
+    achats.forEach((a) => years.add(new Date(a.date).getFullYear()));
+    if (years.size === 0) years.add(new Date().getFullYear());
+    return Array.from(years).sort((a, b) => b - a);
+  }, [ventes, achats]);
 
-  const ventesTotal = ventesChartData.reduce((s, d) => s + d.value, 0);
-  const ventesCount = ventes.filter((v) => {
-    const dayStr = new Date(v.date).toISOString().split("T")[0];
-    return days.includes(dayStr);
-  }).length;
+  React.useEffect(() => {
+    if (availableYears.length > 0 && !availableYears.includes(selectedYear)) {
+      setSelectedYear(availableYears[0]);
+    }
+  }, [availableYears, selectedYear]);
 
-  // Top products by ventes
+  // ── TOP PRODUCTS ──
   const ventesByProduit: Record<number, { nom: string; emoji?: string; total: number; qty: number }> = {};
   ventes.forEach((v) => {
     (v.items ?? []).forEach((item) => {
@@ -243,24 +270,10 @@ export default function HistoriqueScreen() {
       ventesByProduit[item.produitId].qty += item.quantite;
     });
   });
-  const topVentes = Object.entries(ventesByProduit)
+  const topVentesProduits = Object.entries(ventesByProduit)
     .sort((a, b) => b[1].total - a[1].total)
     .slice(0, 8);
 
-  // ── ACHATS DATA ──
-  const achatsChartData = days.map((day) => {
-    const dayAchats = achats.filter((a) => isSameDay(a.date, day));
-    const total = dayAchats.reduce((s, a) => s + Number(a.prixUnitaire) * a.quantite, 0);
-    return { label: formatDayLabel(day), value: Math.round(total), count: dayAchats.length };
-  });
-
-  const achatsTotal = achatsChartData.reduce((s, d) => s + d.value, 0);
-  const achatsCount = achats.filter((a) => {
-    const dayStr = new Date(a.date).toISOString().split("T")[0];
-    return days.includes(dayStr);
-  }).length;
-
-  // Top products by achats
   const achatsByProduit: Record<number, { nom: string; emoji?: string; total: number; qty: number }> = {};
   achats.forEach((a) => {
     if (!achatsByProduit[a.produitId]) {
@@ -274,18 +287,123 @@ export default function HistoriqueScreen() {
     achatsByProduit[a.produitId].total += Number(a.prixUnitaire) * a.quantite;
     achatsByProduit[a.produitId].qty += a.quantite;
   });
-  const topAchats = Object.entries(achatsByProduit)
+  const topAchatsProduits = Object.entries(achatsByProduit)
     .sort((a, b) => b[1].total - a[1].total)
     .slice(0, 8);
+
+  // ── FILTERED VENTES/ACHATS by produit ──
+  const ventesFiltered = produitFilterId
+    ? ventes.filter((v) => (v.items ?? []).some((it) => it.produitId === produitFilterId))
+    : ventes;
+  const achatsFiltered = produitFilterId
+    ? achats.filter((a) => a.produitId === produitFilterId)
+    : achats;
+
+  // ── CHART DATA ──
+  let ventesChartData: { label: string; value: number; count: number }[] = [];
+  let ventesTotal = 0;
+  let ventesCount = 0;
+
+  let achatsChartData: { label: string; value: number; count: number }[] = [];
+  let achatsTotal = 0;
+  let achatsCount = 0;
+
+  if (period === "7j") {
+    ventesChartData = days7.map((day) => {
+      const dayV = ventesFiltered.filter((v) => isSameDay(v.date, day));
+      const total = dayV.reduce((s, v) => {
+        if (produitFilterId) {
+          const itemTotal = (v.items ?? [])
+            .filter((it) => it.produitId === produitFilterId)
+            .reduce((ss, it) => ss + Number(it.prixUnitaire) * it.quantite, 0);
+          return s + itemTotal;
+        }
+        return s + Number(v.total);
+      }, 0);
+      return { label: formatDayLabel(day), value: Math.round(total), count: dayV.length };
+    });
+    ventesTotal = ventesChartData.reduce((s, d) => s + d.value, 0);
+    ventesCount = ventesFiltered.filter((v) => days7.includes(new Date(v.date).toISOString().split("T")[0])).length;
+
+    achatsChartData = days7.map((day) => {
+      const dayA = achatsFiltered.filter((a) => isSameDay(a.date, day));
+      const total = dayA.reduce((s, a) => s + Number(a.prixUnitaire) * a.quantite, 0);
+      return { label: formatDayLabel(day), value: Math.round(total), count: dayA.length };
+    });
+    achatsTotal = achatsChartData.reduce((s, d) => s + d.value, 0);
+    achatsCount = achatsFiltered.filter((a) => days7.includes(new Date(a.date).toISOString().split("T")[0])).length;
+  } else if (period === "30j") {
+    ventesChartData = days30.map((day) => {
+      const dayV = ventesFiltered.filter((v) => isSameDay(v.date, day));
+      const total = dayV.reduce((s, v) => {
+        if (produitFilterId) {
+          const itemTotal = (v.items ?? [])
+            .filter((it) => it.produitId === produitFilterId)
+            .reduce((ss, it) => ss + Number(it.prixUnitaire) * it.quantite, 0);
+          return s + itemTotal;
+        }
+        return s + Number(v.total);
+      }, 0);
+      const d = new Date(day + "T00:00:00");
+      return {
+        label: d.getDate() % LABEL_EVERY_N_DAYS === 0 ? `${d.getDate()}/${d.getMonth() + 1}` : "",
+        value: Math.round(total),
+        count: dayV.length,
+      };
+    });
+    ventesTotal = ventesChartData.reduce((s, d) => s + d.value, 0);
+    ventesCount = ventesFiltered.filter((v) => days30.includes(new Date(v.date).toISOString().split("T")[0])).length;
+
+    achatsChartData = days30.map((day) => {
+      const dayA = achatsFiltered.filter((a) => isSameDay(a.date, day));
+      const total = dayA.reduce((s, a) => s + Number(a.prixUnitaire) * a.quantite, 0);
+      const d = new Date(day + "T00:00:00");
+      return {
+        label: d.getDate() % LABEL_EVERY_N_DAYS === 0 ? `${d.getDate()}/${d.getMonth() + 1}` : "",
+        value: Math.round(total),
+        count: dayA.length,
+      };
+    });
+    achatsTotal = achatsChartData.reduce((s, d) => s + d.value, 0);
+    achatsCount = achatsFiltered.filter((a) => days30.includes(new Date(a.date).toISOString().split("T")[0])).length;
+  } else {
+    // annee
+    ventesChartData = MONTH_LABELS.map((label, monthIdx) => {
+      const monthV = ventesFiltered.filter((v) => {
+        const d = new Date(v.date);
+        return d.getFullYear() === selectedYear && d.getMonth() === monthIdx;
+      });
+      const total = monthV.reduce((s, v) => {
+        if (produitFilterId) {
+          const itemTotal = (v.items ?? [])
+            .filter((it) => it.produitId === produitFilterId)
+            .reduce((ss, it) => ss + Number(it.prixUnitaire) * it.quantite, 0);
+          return s + itemTotal;
+        }
+        return s + Number(v.total);
+      }, 0);
+      return { label, value: Math.round(total), count: monthV.length };
+    });
+    ventesTotal = ventesChartData.reduce((s, d) => s + d.value, 0);
+    ventesCount = ventesFiltered.filter((v) => new Date(v.date).getFullYear() === selectedYear).length;
+
+    achatsChartData = MONTH_LABELS.map((label, monthIdx) => {
+      const monthA = achatsFiltered.filter((a) => {
+        const d = new Date(a.date);
+        return d.getFullYear() === selectedYear && d.getMonth() === monthIdx;
+      });
+      const total = monthA.reduce((s, a) => s + Number(a.prixUnitaire) * a.quantite, 0);
+      return { label, value: Math.round(total), count: monthA.length };
+    });
+    achatsTotal = achatsChartData.reduce((s, d) => s + d.value, 0);
+    achatsCount = achatsFiltered.filter((a) => new Date(a.date).getFullYear() === selectedYear).length;
+  }
 
   // ── STOCK DATA ──
   const stockChartData = produits
     .sort((a, b) => b.stock - a.stock)
     .slice(0, 7)
-    .map((p) => ({
-      label: p.nom.substring(0, 6),
-      value: p.stock,
-    }));
+    .map((p) => ({ label: p.nom.substring(0, 6), value: p.stock }));
 
   const totalStock = produits.reduce((s, p) => s + p.stock, 0);
   const enRupture = produits.filter((p) => p.stock === 0).length;
@@ -294,19 +412,22 @@ export default function HistoriqueScreen() {
   const isLoading = loadingVentes || loadingAchats || loadingProduits;
   const topInsets = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
+  const periodLabel = period === "7j" ? "7 derniers jours" : period === "30j" ? "30 derniers jours" : `Année ${selectedYear}`;
+  const statsLabel = period === "annee" ? `Total ${selectedYear}` : period === "30j" ? "Total 30 jours" : "Total 7 jours";
+
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: topInsets + 16 }]}>
         <Text style={styles.title}>Historique</Text>
       </View>
 
-      {/* Segment control */}
+      {/* Tab selector */}
       <View style={styles.segmentRow}>
         {(["ventes", "achats", "stock"] as Tab[]).map((tab) => (
           <Pressable
             key={tab}
             style={[styles.segBtn, activeTab === tab && styles.segBtnActive]}
-            onPress={() => setActiveTab(tab)}
+            onPress={() => { setActiveTab(tab); setProduitFilterId(null); }}
           >
             <Text style={[styles.segText, activeTab === tab && styles.segTextActive]}>
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -314,6 +435,45 @@ export default function HistoriqueScreen() {
           </Pressable>
         ))}
       </View>
+
+      {/* Period selector (only for ventes/achats) */}
+      {activeTab !== "stock" && (
+        <View style={styles.periodRow}>
+          {(["7j", "30j", "annee"] as Period[]).map((p) => (
+            <Pressable
+              key={p}
+              style={[styles.periodBtn, period === p && styles.periodBtnActive]}
+              onPress={() => setPeriod(p)}
+            >
+              <Text style={[styles.periodText, period === p && styles.periodTextActive]}>
+                {p === "7j" ? "7 jours" : p === "30j" ? "30 jours" : "Par an"}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      {/* Year selector (only when period = annee) */}
+      {activeTab !== "stock" && period === "annee" && availableYears.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.yearRow}
+          contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
+        >
+          {availableYears.map((year) => (
+            <Pressable
+              key={year}
+              style={[styles.yearBtn, selectedYear === year && styles.yearBtnActive]}
+              onPress={() => setSelectedYear(year)}
+            >
+              <Text style={[styles.yearText, selectedYear === year && styles.yearTextActive]}>
+                {year}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
 
       {isLoading ? (
         <View style={styles.loadingBox}>
@@ -328,26 +488,62 @@ export default function HistoriqueScreen() {
           {/* ── VENTES TAB ── */}
           {activeTab === "ventes" && (
             <View style={styles.tabContent}>
+              {/* Product filter chips */}
+              {topVentesProduits.length > 0 && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingVertical: 4 }}
+                >
+                  <Pressable
+                    style={[styles.prodChip, !produitFilterId && styles.prodChipActive]}
+                    onPress={() => setProduitFilterId(null)}
+                  >
+                    <Text style={[styles.prodChipText, !produitFilterId && styles.prodChipTextActive]}>
+                      Tous
+                    </Text>
+                  </Pressable>
+                  {topVentesProduits.map(([id, data]) => (
+                    <Pressable
+                      key={id}
+                      style={[styles.prodChip, produitFilterId === Number(id) && styles.prodChipActive]}
+                      onPress={() => setProduitFilterId(produitFilterId === Number(id) ? null : Number(id))}
+                    >
+                      <Text style={styles.prodChipEmoji}>{data.emoji || "📦"}</Text>
+                      <Text
+                        style={[styles.prodChipText, produitFilterId === Number(id) && styles.prodChipTextActive]}
+                        numberOfLines={1}
+                      >
+                        {data.nom.length > 14 ? data.nom.substring(0, 14) + "…" : data.nom}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              )}
+
               <View style={styles.chartCard}>
-                <Text style={styles.chartTitle}>Revenus des 7 derniers jours</Text>
-                <BarChart
-                  data={ventesChartData}
-                  color={Colors.primary}
-                  valueFormatter={formatFCFA}
-                />
+                <Text style={styles.chartTitle}>
+                  Revenus — {periodLabel}
+                  {produitFilterId && topVentesProduits.find(([id]) => Number(id) === produitFilterId)
+                    ? ` · ${topVentesProduits.find(([id]) => Number(id) === produitFilterId)![1].nom}`
+                    : ""}
+                </Text>
+                <BarChart data={ventesChartData} color={Colors.primary} valueFormatter={formatFCFA} />
               </View>
 
               <StatsRow
                 total={ventesTotal}
-                avg={ventesTotal / 7}
+                avg={ventesTotal / (period === "annee" ? 12 : period === "30j" ? 30 : 7)}
                 count={ventesCount}
                 color={Colors.primary}
+                avgLabel={period === "annee" ? "Moy./mois" : "Moy./jour"}
+                totalLabel={statsLabel}
               />
 
-              {topVentes.length > 0 && (
+              {topVentesProduits.length > 0 && (
                 <View style={styles.listCard}>
                   <Text style={styles.listCardTitle}>Top produits (tous temps)</Text>
-                  {topVentes.map(([id, data]) => (
+                  {topVentesProduits.map(([id, data]) => (
                     <View key={id} style={styles.rankRow}>
                       <Text style={styles.rankEmoji}>{data.emoji || "📦"}</Text>
                       <View style={{ flex: 1 }}>
@@ -362,7 +558,7 @@ export default function HistoriqueScreen() {
                 </View>
               )}
 
-              {topVentes.length === 0 && (
+              {topVentesProduits.length === 0 && (
                 <View style={styles.emptyCard}>
                   <Text style={{ fontSize: 40 }}>📊</Text>
                   <Text style={styles.emptyText}>Aucune vente enregistrée</Text>
@@ -374,26 +570,62 @@ export default function HistoriqueScreen() {
           {/* ── ACHATS TAB ── */}
           {activeTab === "achats" && (
             <View style={styles.tabContent}>
+              {/* Product filter chips */}
+              {topAchatsProduits.length > 0 && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingVertical: 4 }}
+                >
+                  <Pressable
+                    style={[styles.prodChip, !produitFilterId && styles.prodChipActive]}
+                    onPress={() => setProduitFilterId(null)}
+                  >
+                    <Text style={[styles.prodChipText, !produitFilterId && styles.prodChipTextActive]}>
+                      Tous
+                    </Text>
+                  </Pressable>
+                  {topAchatsProduits.map(([id, data]) => (
+                    <Pressable
+                      key={id}
+                      style={[styles.prodChip, produitFilterId === Number(id) && styles.prodChipActive]}
+                      onPress={() => setProduitFilterId(produitFilterId === Number(id) ? null : Number(id))}
+                    >
+                      <Text style={styles.prodChipEmoji}>{data.emoji || "📦"}</Text>
+                      <Text
+                        style={[styles.prodChipText, produitFilterId === Number(id) && styles.prodChipTextActive]}
+                        numberOfLines={1}
+                      >
+                        {data.nom.length > 14 ? data.nom.substring(0, 14) + "…" : data.nom}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              )}
+
               <View style={styles.chartCard}>
-                <Text style={styles.chartTitle}>Dépenses achats des 7 derniers jours</Text>
-                <BarChart
-                  data={achatsChartData}
-                  color={Colors.accent}
-                  valueFormatter={formatFCFA}
-                />
+                <Text style={styles.chartTitle}>
+                  Dépenses achats — {periodLabel}
+                  {produitFilterId && topAchatsProduits.find(([id]) => Number(id) === produitFilterId)
+                    ? ` · ${topAchatsProduits.find(([id]) => Number(id) === produitFilterId)![1].nom}`
+                    : ""}
+                </Text>
+                <BarChart data={achatsChartData} color={Colors.accent} valueFormatter={formatFCFA} />
               </View>
 
               <StatsRow
                 total={achatsTotal}
-                avg={achatsTotal / 7}
+                avg={achatsTotal / (period === "annee" ? 12 : period === "30j" ? 30 : 7)}
                 count={achatsCount}
                 color={Colors.accent}
+                avgLabel={period === "annee" ? "Moy./mois" : "Moy./jour"}
+                totalLabel={statsLabel}
               />
 
-              {topAchats.length > 0 && (
+              {topAchatsProduits.length > 0 && (
                 <View style={styles.listCard}>
                   <Text style={styles.listCardTitle}>Top produits achetés (tous temps)</Text>
-                  {topAchats.map(([id, data]) => (
+                  {topAchatsProduits.map(([id, data]) => (
                     <View key={id} style={styles.rankRow}>
                       <Text style={styles.rankEmoji}>{data.emoji || "📦"}</Text>
                       <View style={{ flex: 1 }}>
@@ -408,7 +640,7 @@ export default function HistoriqueScreen() {
                 </View>
               )}
 
-              {topAchats.length === 0 && (
+              {topAchatsProduits.length === 0 && (
                 <View style={styles.emptyCard}>
                   <Text style={{ fontSize: 40 }}>🛒</Text>
                   <Text style={styles.emptyText}>Aucun achat enregistré</Text>
@@ -422,11 +654,7 @@ export default function HistoriqueScreen() {
             <View style={styles.tabContent}>
               <View style={styles.chartCard}>
                 <Text style={styles.chartTitle}>Top 7 produits par stock actuel</Text>
-                <BarChart
-                  data={stockChartData}
-                  color={Colors.info}
-                  valueFormatter={(v) => String(v)}
-                />
+                <BarChart data={stockChartData} color={Colors.info} valueFormatter={(v) => String(v)} />
               </View>
 
               <View style={styles.statsRow}>
@@ -508,7 +736,7 @@ const styles = StyleSheet.create({
   segmentRow: {
     flexDirection: "row",
     marginHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 10,
     backgroundColor: Colors.surface,
     borderRadius: 12,
     padding: 4,
@@ -524,6 +752,54 @@ const styles = StyleSheet.create({
   segBtnActive: { backgroundColor: Colors.primary },
   segText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
   segTextActive: { color: "#fff" },
+  // Period selector
+  periodRow: {
+    flexDirection: "row",
+    marginHorizontal: 20,
+    marginBottom: 10,
+    gap: 8,
+  },
+  periodBtn: {
+    flex: 1,
+    paddingVertical: 7,
+    borderRadius: 10,
+    alignItems: "center",
+    backgroundColor: Colors.surface,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+  },
+  periodBtnActive: { backgroundColor: Colors.primary + "15", borderColor: Colors.primary },
+  periodText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
+  periodTextActive: { color: Colors.primary },
+  // Year row
+  yearRow: { marginBottom: 10, maxHeight: 40 },
+  yearBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: Colors.surface,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+  },
+  yearBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  yearText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
+  yearTextActive: { color: "#fff" },
+  // Product chips
+  prodChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: Colors.surface,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+  },
+  prodChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  prodChipText: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
+  prodChipTextActive: { color: "#fff" },
+  prodChipEmoji: { fontSize: 13 },
   tabContent: { paddingHorizontal: 20, gap: 16 },
   chartCard: {
     backgroundColor: Colors.surface,
