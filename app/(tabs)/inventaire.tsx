@@ -86,6 +86,7 @@ function ProduitModal({
   const [imageMime, setImageMime] = useState<string>("image/jpeg");
   const [uploading, setUploading] = useState(false);
   const [categorie, setCategorie] = useState(initial?.categorie ?? "Boissons");
+  const [prixAchat, setPrixAchat] = useState(initial?.prixAchat?.toString() ?? "");
   const [prixVente, setPrixVente] = useState(initial?.prixVente?.toString() ?? "");
   const [stock, setStock] = useState(initial?.stock?.toString() ?? "0");
   const [error, setError] = useState("");
@@ -100,6 +101,7 @@ function ProduitModal({
       setImageBase64(null);
       setImageMime("image/jpeg");
       setCategorie(initial?.categorie ?? "Boissons");
+      setPrixAchat(initial?.prixAchat?.toString() ?? "");
       setPrixVente(initial?.prixVente?.toString() ?? "");
       setStock(initial?.stock?.toString() ?? "0");
       setError("");
@@ -201,6 +203,7 @@ function ProduitModal({
         image: imageUrl,
         ean: ean.trim() || undefined,
         categorie,
+        prixAchat: prixAchat || "0",
         prixVente,
         stock: parseInt(stock) || 0,
       };
@@ -334,9 +337,30 @@ function ProduitModal({
             </MField>
 
             {/* ── PRIX ── */}
-            <MField label="Prix vente (FCFA) *">
-              <TextInput style={ms.input} placeholder="800" placeholderTextColor={Colors.textMuted} value={prixVente} onChangeText={setPrixVente} keyboardType="numeric" />
-            </MField>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <MField label="Prix achat (FCFA)" style={{ flex: 1 }}>
+                <TextInput style={ms.input} placeholder="0" placeholderTextColor={Colors.textMuted} value={prixAchat} onChangeText={setPrixAchat} keyboardType="numeric" />
+              </MField>
+              <MField label="Prix vente (FCFA) *" style={{ flex: 1 }}>
+                <TextInput style={ms.input} placeholder="800" placeholderTextColor={Colors.textMuted} value={prixVente} onChangeText={setPrixVente} keyboardType="numeric" />
+              </MField>
+            </View>
+
+            {prixAchat && prixVente && Number(prixAchat) >= 0 && Number(prixVente) > 0 ? (
+              (() => {
+                const marge = Number(prixVente) - Number(prixAchat);
+                const margeColor = marge > 0 ? Colors.success : Colors.danger;
+                const margePct = Number(prixAchat) > 0 ? ((marge / Number(prixAchat)) * 100).toFixed(0) + "%" : "—";
+                return (
+                  <View style={ms.margePreview}>
+                    <Ionicons name="trending-up-outline" size={15} color={margeColor} />
+                    <Text style={ms.margeLabel}>Marge :</Text>
+                    <Text style={[ms.margeValue, { color: margeColor }]}>{formatFCFA(marge)}</Text>
+                    <Text style={[ms.margeLabel, { marginLeft: 4 }]}>({margePct})</Text>
+                  </View>
+                );
+              })()
+            ) : null}
 
             <MField label="Stock initial">
               <TextInput style={ms.input} placeholder="0" placeholderTextColor={Colors.textMuted} value={stock} onChangeText={setStock} keyboardType="numeric" />
