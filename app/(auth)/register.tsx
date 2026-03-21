@@ -67,7 +67,7 @@ export default function RegisterScreen() {
           <View style={styles.logoContainer}>
             <Ionicons name="storefront" size={36} color={Colors.primary} />
           </View>
-          <Text style={styles.appName}>BarGest Togo</Text>
+          <Text style={styles.appName}>MaquisGest Togo</Text>
           <Text style={styles.subtitle}>Créer votre compte</Text>
         </View>
 

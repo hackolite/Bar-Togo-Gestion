@@ -42,16 +42,6 @@ interface AchatFournisseur {
   produit: Produit;
 }
 
-const CATEGORIES = ["Boissons", "Alcools", "Cocktails", "Nourriture", "Autres"];
-
-const CAT_COLORS: Record<string, string> = {
-  Boissons: "#3A86FF",
-  Alcools: "#8B5CF6",
-  Cocktails: "#EC4899",
-  Nourriture: "#F97316",
-  Autres: "#6B7280",
-};
-
 const CAT_EMOJIS: Record<string, string> = {
   Boissons: "🥤",
   Alcools: "🍺",
@@ -90,6 +80,7 @@ function AchatModal({
   const [selectedProduit, setSelectedProduit] = useState<Produit | null>(null);
   const [quantite, setQuantite] = useState("1");
   const [prixUnitaire, setPrixUnitaire] = useState("");
+  const [fournisseur, setFournisseur] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [step, setStep] = useState<"produit" | "details">("produit");
@@ -101,6 +92,7 @@ function AchatModal({
       setSelectedProduit(prod);
       setQuantite("1");
       setPrixUnitaire(prod && prod.prixAchat !== "0" ? prod.prixAchat : "");
+      setFournisseur("");
       setNote("");
       setError("");
       setStep(prod ? "details" : "produit");
@@ -125,7 +117,7 @@ function AchatModal({
         produitId: selectedProduit!.id,
         quantite: parseInt(quantite),
         prixUnitaire,
-        fournisseur: "Autre",
+        fournisseur: fournisseur.trim() || "Autre",
         note: note || undefined,
         date: new Date().toISOString(),
       };
@@ -287,6 +279,18 @@ function AchatModal({
                   value={prixUnitaire}
                   onChangeText={setPrixUnitaire}
                   keyboardType="numeric"
+                />
+              </View>
+
+              <View style={am.field}>
+                <Text style={am.label}>Fournisseur</Text>
+                <TextInput
+                  style={am.input}
+                  placeholder="Nom du fournisseur"
+                  placeholderTextColor={Colors.textMuted}
+                  value={fournisseur}
+                  onChangeText={setFournisseur}
+                  autoCapitalize="words"
                 />
               </View>
 
@@ -665,11 +669,9 @@ export default function AchatsScreen() {
   const insets = useSafeAreaInsets();
   const [modalVisible, setModalVisible] = useState(false);
   const [csvModalVisible, setCsvModalVisible] = useState(false);
-  const [selectedProduit, setSelectedProduit] = useState<Produit | null>(null);
   const [search, setSearch] = useState("");
-  const [catFilter, setCatFilter] = useState<string | null>(null);
 
-  const { data: produits = [], isLoading } = useQuery<Produit[]>({
+  const { data: produits = [] } = useQuery<Produit[]>({
     queryKey: ["/api/produits"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/produits");
@@ -677,7 +679,7 @@ export default function AchatsScreen() {
     },
   });
 
-  const { data: achats = [] } = useQuery<AchatFournisseur[]>({
+  const { data: achats = [], isLoading } = useQuery<AchatFournisseur[]>({
     queryKey: ["/api/achats"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/achats");
@@ -685,101 +687,58 @@ export default function AchatsScreen() {
     },
   });
 
-  const totalRecuParProduit = React.useMemo(() => {
-    const map: Record<number, number> = {};
-    achats.forEach((a) => {
-      map[a.produitId] = (map[a.produitId] ?? 0) + a.quantite;
-    });
-    return map;
+  const totalJour = React.useMemo(() => {
+    const today = new Date().toDateString();
+    return achats
+      .filter((a) => new Date(a.date).toDateString() === today)
+      .reduce((s, a) => s + Number(a.prixUnitaire) * a.quantite, 0);
   }, [achats]);
 
-  const filtered = produits.filter((p) => {
-    const q = search.toLowerCase();
-    const matchSearch =
-      !q ||
-      p.nom.toLowerCase().includes(q) ||
-      p.categorie.toLowerCase().includes(q);
-    const matchCat = !catFilter || p.categorie === catFilter;
-    return matchSearch && matchCat;
-  });
-
-  const openAchat = (p: Produit) => {
-    setSelectedProduit(p);
-    setModalVisible(true);
-  };
+  const filteredAchats = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return achats
+      .filter((a) => {
+        if (!q) return true;
+        return (
+          a.produit.nom.toLowerCase().includes(q) ||
+          (a.fournisseur && a.fournisseur.toLowerCase().includes(q))
+        );
+      })
+      .slice()
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [achats, search]);
 
   const topInsets = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
-  const renderItem = ({ item }: { item: Produit }) => {
-    const stockBas = item.stock < 10;
-    const catColor = CAT_COLORS[item.categorie] ?? Colors.primary;
-    const totalRecu = totalRecuParProduit[item.id] ?? 0;
-    const hasImage = !!item.image;
-
+  const renderAchat = ({ item }: { item: AchatFournisseur }) => {
+    const total = Number(item.prixUnitaire) * item.quantite;
+    const produit = item.produit;
     return (
-      <View style={styles.produitCard}>
-        <Pressable style={{ flex: 1 }} onPress={() => openAchat(item)}>
-          <View style={styles.cardInner}>
-            <View style={styles.mediaContainer}>
-              {hasImage ? (
-                <Image
-                  source={{ uri: getImageUrl(item.image!) }}
-                  style={styles.produitImage}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View style={[styles.emojiContainer, { backgroundColor: catColor + "18" }]}>
-                  <Text style={styles.emojiLarge}>
-                    {item.emoji ?? CAT_EMOJIS[item.categorie] ?? "📦"}
-                  </Text>
-                </View>
-              )}
-              <View
-                style={[
-                  styles.stockOverlay,
-                  { backgroundColor: stockBas ? Colors.danger : Colors.success },
-                ]}
-              >
-                <Text style={styles.stockOverlayText}>{item.stock}</Text>
-              </View>
-            </View>
-
-            <View style={styles.infoContainer}>
-              <View
-                style={[
-                  styles.catBadge,
-                  { borderColor: catColor + "50", backgroundColor: catColor + "10" },
-                ]}
-              >
-                <Text style={[styles.catBadgeText, { color: catColor }]}>
-                  {item.categorie}
-                </Text>
-              </View>
-              <Text style={styles.produitNom} numberOfLines={2}>
-                {item.nom}
-              </Text>
-              <View style={styles.priceRow}>
-                <View>
-                  <Text style={styles.priceLabel}>Vente</Text>
-                  <Text style={styles.priceVente}>{formatFCFA(item.prixVente)}</Text>
-                </View>
-                <View style={styles.priceDivider} />
-                <View>
-                  <Text style={styles.priceLabel}>Reçu total</Text>
-                  <Text style={styles.priceRecu}>{totalRecu} u.</Text>
-                </View>
-              </View>
-            </View>
+      <View style={styles.achatCard}>
+        <View style={styles.achatHeader}>
+          <View style={styles.achatIconBox}>
+            <Ionicons name="cart" size={18} color={Colors.accent} />
           </View>
-        </Pressable>
-
-        <Pressable
-          style={({ pressed }) => [styles.achatBtn, { opacity: pressed ? 0.8 : 1 }]}
-          onPress={() => openAchat(item)}
-        >
-          <Ionicons name="cart" size={16} color={Colors.primary} />
-          <Text style={styles.achatBtnText}>Acheter</Text>
-        </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.achatDate}>{formatDate(item.date)}</Text>
+            {item.fournisseur ? (
+              <Text style={styles.achatFournisseur}>🏪 {item.fournisseur}</Text>
+            ) : null}
+          </View>
+          <Text style={styles.achatTotal}>{formatFCFA(total)}</Text>
+        </View>
+        <View style={styles.achatDivider} />
+        <View style={styles.achatBody}>
+          <View style={styles.achatRow}>
+            <Text style={styles.achatProdNom} numberOfLines={1}>
+              {produit?.emoji || (produit?.categorie && CAT_EMOJIS[produit.categorie]) || "📦"}{" "}
+              {produit?.nom ?? "Produit supprimé"}
+            </Text>
+            <Text style={styles.achatQty}>×{item.quantite}</Text>
+            <Text style={styles.achatPrix}>{formatFCFA(item.prixUnitaire)}/u</Text>
+          </View>
+          {item.note ? <Text style={styles.achatNote}>{item.note}</Text> : null}
+        </View>
       </View>
     );
   };
@@ -789,7 +748,7 @@ export default function AchatsScreen() {
       <View style={[styles.header, { paddingTop: topInsets + 16 }]}>
         <View>
           <Text style={styles.title}>Achats</Text>
-          <Text style={styles.subtitle}>{produits.length} produit(s) disponible(s)</Text>
+          <Text style={styles.subtitle}>Aujourd'hui: {formatFCFA(totalJour)}</Text>
         </View>
         <View style={{ flexDirection: "row", gap: 8 }}>
           <Pressable
@@ -800,10 +759,7 @@ export default function AchatsScreen() {
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.85 : 1 }]}
-            onPress={() => {
-              setSelectedProduit(null);
-              setModalVisible(true);
-            }}
+            onPress={() => setModalVisible(true)}
           >
             <Ionicons name="add" size={22} color="#fff" />
           </Pressable>
@@ -814,7 +770,7 @@ export default function AchatsScreen() {
         <Ionicons name="search-outline" size={16} color={Colors.textMuted} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Rechercher un produit..."
+          placeholder="Rechercher par produit ou fournisseur..."
           placeholderTextColor={Colors.textMuted}
           value={search}
           onChangeText={setSearch}
@@ -826,43 +782,15 @@ export default function AchatsScreen() {
         ) : null}
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.catRow}
-        contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
-      >
-        <Pressable
-          style={[styles.catFilterBtn, !catFilter && styles.catFilterBtnActive]}
-          onPress={() => setCatFilter(null)}
-        >
-          <Text style={[styles.catFilterText, !catFilter && styles.catFilterTextActive]}>
-            Tous
-          </Text>
-        </Pressable>
-        {CATEGORIES.map((c) => (
-          <Pressable
-            key={c}
-            style={[styles.catFilterBtn, catFilter === c && styles.catFilterBtnActive]}
-            onPress={() => setCatFilter(catFilter === c ? null : c)}
-          >
-            <Text style={styles.catFilterEmojiSmall}>{CAT_EMOJIS[c]}</Text>
-            <Text style={[styles.catFilterText, catFilter === c && styles.catFilterTextActive]}>
-              {c}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
-
       {isLoading ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator color={Colors.primary} size="large" />
         </View>
       ) : (
         <FlatList
-          data={filtered}
+          data={filteredAchats}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={renderItem}
+          renderItem={renderAchat}
           contentContainerStyle={[
             styles.list,
             { paddingBottom: Platform.OS === "web" ? 118 : 100 },
@@ -870,12 +798,12 @@ export default function AchatsScreen() {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyBox}>
-              <Text style={{ fontSize: 52 }}>🛒</Text>
+              <Ionicons name="cart-outline" size={48} color={Colors.border} />
               <Text style={styles.emptyText}>
-                {search || catFilter ? "Aucun résultat" : "Aucun produit"}
+                {search ? "Aucun résultat" : "Aucun achat"}
               </Text>
               <Text style={styles.emptySubText}>
-                Ajoutez des produits dans le catalogue pour pouvoir les acheter
+                Appuyez sur + pour enregistrer un achat
               </Text>
             </View>
           }
@@ -884,12 +812,8 @@ export default function AchatsScreen() {
 
       <AchatModal
         visible={modalVisible}
-        onClose={() => {
-          setModalVisible(false);
-          setSelectedProduit(null);
-        }}
+        onClose={() => setModalVisible(false)}
         produits={produits}
-        initialProduit={selectedProduit}
       />
       <ImportCSVAchatsModal
         visible={csvModalVisible}
@@ -899,43 +823,65 @@ export default function AchatsScreen() {
   );
 }
 
+function formatDate(d: string) {
+  return new Date(d).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingBottom: 12, backgroundColor: Colors.background },
+  header: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    paddingHorizontal: 20, paddingBottom: 12, backgroundColor: Colors.background,
+  },
   title: { fontSize: 24, fontFamily: "Inter_700Bold", color: Colors.text },
-  subtitle: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: 2 },
-  addBtn: { width: 42, height: 42, borderRadius: 12, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
-  importBtn: { width: 42, height: 42, borderRadius: 12, backgroundColor: Colors.accent + "15", alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: Colors.accent + "40" },
-  searchRow: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.surface, marginHorizontal: 20, marginBottom: 8, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, gap: 10, borderWidth: 1, borderColor: Colors.border },
+  subtitle: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: 2 },
+  addBtn: {
+    width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.primary,
+    alignItems: "center", justifyContent: "center",
+    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+  },
+  importBtn: {
+    width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.accent + "15",
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1.5, borderColor: Colors.accent + "40",
+  },
+  searchRow: {
+    flexDirection: "row", alignItems: "center", backgroundColor: Colors.surface,
+    marginHorizontal: 20, marginBottom: 12, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 11, gap: 10,
+    borderWidth: 1, borderColor: Colors.border,
+  },
   searchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.text, padding: 0 },
-  catRow: { marginBottom: 12 },
-  catFilterBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: Colors.surface, borderWidth: 1.5, borderColor: Colors.border },
-  catFilterBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  catFilterText: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.textMuted },
-  catFilterTextActive: { color: "#fff" },
-  catFilterEmojiSmall: { fontSize: 13 },
-  list: { paddingHorizontal: 16, gap: 12 },
-  produitCard: { backgroundColor: Colors.surface, borderRadius: 18, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 10, elevation: 2 },
-  cardInner: { flexDirection: "row" },
-  mediaContainer: { width: 90, position: "relative" },
-  produitImage: { width: 90, height: 90 },
-  emojiContainer: { width: 90, height: 90, alignItems: "center", justifyContent: "center" },
-  emojiLarge: { fontSize: 36 },
-  stockOverlay: { position: "absolute", bottom: 6, right: 6, minWidth: 26, height: 22, borderRadius: 11, paddingHorizontal: 6, alignItems: "center", justifyContent: "center" },
-  stockOverlayText: { fontSize: 11, fontFamily: "Inter_700Bold", color: "#fff" },
-  infoContainer: { flex: 1, padding: 12, gap: 6, justifyContent: "center" },
-  catBadge: { alignSelf: "flex-start", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
-  catBadgeText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
-  produitNom: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.text, lineHeight: 20 },
-  priceRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  priceDivider: { width: 1, height: 20, backgroundColor: Colors.border },
-  priceLabel: { fontSize: 9, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginBottom: 1 },
-  priceVente: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: Colors.primary },
-  priceRecu: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: Colors.accent },
-  achatBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderTopWidth: 1, borderTopColor: Colors.border, backgroundColor: Colors.primary + "06" },
-  achatBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.primary },
+  list: { paddingHorizontal: 20, gap: 12 },
+  achatCard: {
+    backgroundColor: Colors.surface, borderRadius: 16, overflow: "hidden",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+  },
+  achatHeader: { flexDirection: "row", alignItems: "center", gap: 12, padding: 16 },
+  achatIconBox: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: Colors.background, alignItems: "center", justifyContent: "center",
+  },
+  achatDate: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.text },
+  achatFournisseur: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: 2 },
+  achatTotal: { fontSize: 16, fontFamily: "Inter_700Bold", color: Colors.accent },
+  achatDivider: { height: 1, backgroundColor: Colors.border, marginHorizontal: 16 },
+  achatBody: { padding: 12, gap: 4 },
+  achatRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  achatProdNom: { flex: 1, fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.text },
+  achatQty: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
+  achatPrix: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted },
+  achatNote: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: 2 },
   loadingBox: { flex: 1, alignItems: "center", justifyContent: "center" },
-  emptyBox: { alignItems: "center", paddingTop: 60, gap: 12, paddingHorizontal: 20 },
+  emptyBox: { alignItems: "center", paddingTop: 60, gap: 10 },
   emptyText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
-  emptySubText: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted, textAlign: "center", lineHeight: 20 },
+  emptySubText: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted },
 });
