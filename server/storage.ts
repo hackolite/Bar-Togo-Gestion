@@ -54,6 +54,17 @@ export interface IStorage {
     totalDepensesHier: number;
     topProduits: { nom: string; quantite: number; total: number }[];
   }>;
+
+  getAnalytics(userId: number): Promise<
+    {
+      date: string;
+      revenue: number;
+      quantity: number;
+      margin: number;
+      hour: number;
+      dayOfWeek: number;
+    }[]
+  >;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -283,6 +294,48 @@ export class DatabaseStorage implements IStorage {
       },
       alertesStock: alertesStockRaw,
     };
+  }
+
+  async getAnalytics(
+    userId: number
+  ): Promise<
+    {
+      date: string;
+      revenue: number;
+      quantity: number;
+      margin: number;
+      hour: number;
+      dayOfWeek: number;
+    }[]
+  > {
+    const rows = await db
+      .select({
+        venteId: ventes.id,
+        date: ventes.date,
+        revenue: sql<string>`sum(${venteItems.quantite} * ${venteItems.prixUnitaire}::numeric)`,
+        quantity: sql<string>`sum(${venteItems.quantite})`,
+        margin: sql<string>`sum(${venteItems.quantite} * (${venteItems.prixUnitaire}::numeric - COALESCE(${produits.prixAchat}::numeric, 0)))`,
+        hour: sql<number>`extract(hour from ${ventes.date})`,
+        dayOfWeek: sql<number>`extract(dow from ${ventes.date})`,
+      })
+      .from(ventes)
+      .innerJoin(venteItems, eq(venteItems.venteId, ventes.id))
+      .innerJoin(produits, eq(venteItems.produitId, produits.id))
+      .where(eq(ventes.userId, userId))
+      .groupBy(ventes.id, ventes.date)
+      .orderBy(desc(ventes.date));
+
+    return rows.map((r) => ({
+      date:
+        r.date instanceof Date
+          ? r.date.toISOString().split("T")[0]
+          : String(r.date).split("T")[0],
+      revenue: parseFloat(r.revenue ?? "0"),
+      quantity: parseInt(r.quantity ?? "0", 10),
+      margin: parseFloat(r.margin ?? "0"),
+      hour: Number(r.hour),
+      dayOfWeek: Number(r.dayOfWeek),
+    }));
   }
 }
 
