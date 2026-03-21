@@ -7,37 +7,57 @@ import {
   TextInput,
   ActivityIndicator,
   Platform,
-  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, {
-  Polyline,
-  Rect,
-  Circle,
-  Line,
-  Text as SvgText,
-  G,
-} from "react-native-svg";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import Colors from "@/constants/colors";
 
 // ── TYPES ──────────────────────────────────────────────────────────────────────
 
-interface AnalyticsRow {
-  date: string;
-  revenue: number;
-  quantity: number;
-  margin: number;
-  hour: number;
-  dayOfWeek: number;
+interface VenteItem {
+  produitId: number;
+  quantite: number;
+  prixUnitaire: string;
+  produit: { nom: string; emoji?: string };
 }
 
-interface DailyRow {
+interface VenteRecord {
+  id: number;
   date: string;
-  revenue: number;
-  quantity: number;
-  margin: number;
+  total: string;
+  note?: string;
+  items: VenteItem[];
+}
+
+interface DepenseRecord {
+  id: number;
+  date: string;
+  libelle: string;
+  montant: string;
+  categorie: string;
+  note?: string;
+}
+
+interface AchatRecord {
+  id: number;
+  date: string;
+  quantite: number;
+  prixUnitaire: string;
+  fournisseur: string;
+  note?: string;
+  produit: { nom: string; emoji?: string };
+}
+
+type TransactionType = "vente" | "achat" | "depense";
+
+interface HistoryEntry {
+  key: string;
+  type: TransactionType;
+  date: string;
+  label: string;
+  amount: number;
+  detail: string;
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
@@ -48,12 +68,21 @@ function formatFCFA(amount: number): string {
   return new Intl.NumberFormat("fr-FR").format(Math.round(amount)) + " FCFA";
 }
 
-function formatDate(dateStr: string): string {
+function formatDateTime(dateStr: string): string {
   const d = new Date(dateStr);
-  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+  return d.toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
-const DAY_LABELS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+const TYPE_CONFIG: Record<TransactionType, { label: string; icon: string; color: string }> = {
+  vente: { label: "Vente", icon: "💰", color: Colors.primary },
+  achat: { label: "Achat", icon: "📦", color: Colors.info },
+  depense: { label: "Dépense", icon: "💸", color: Colors.danger },
+};
 
 // ── KPI CARD ──────────────────────────────────────────────────────────────────
 
@@ -74,146 +103,6 @@ function KpiCard({ label, value, color, icon }: KpiCardProps) {
   );
 }
 
-// ── LINE CHART ────────────────────────────────────────────────────────────────
-
-interface LineChartProps {
-  data: { label: string; value: number }[];
-  color: string;
-  width: number;
-  height?: number;
-}
-
-function LineChart({ data, color, width, height = 160 }: LineChartProps) {
-  const PADDING = { top: 16, bottom: 32, left: 8, right: 8 };
-  const chartW = width - PADDING.left - PADDING.right;
-  const chartH = height - PADDING.top - PADDING.bottom;
-
-  if (data.length < 2) {
-    return (
-      <View style={[styles.chartEmptyContainer, { width, height }]}>
-        <Text style={styles.emptyText}>Données insuffisantes</Text>
-      </View>
-    );
-  }
-
-  const maxVal = Math.max(...data.map((d) => d.value), 1);
-  const minVal = 0;
-
-  const points = data.map((d, i) => {
-    const x = PADDING.left + (i / (data.length - 1)) * chartW;
-    const y = PADDING.top + chartH - ((d.value - minVal) / (maxVal - minVal)) * chartH;
-    return { x, y, ...d };
-  });
-
-  const polylinePoints = points.map((p) => `${p.x},${p.y}`).join(" ");
-
-  // show at most 6 labels
-  const step = Math.max(1, Math.ceil(data.length / 6));
-  const labelPoints = points.filter((_, i) => i % step === 0 || i === points.length - 1);
-
-  return (
-    <Svg width={width} height={height}>
-      {/* Grid line at top */}
-      <Line
-        x1={PADDING.left}
-        y1={PADDING.top}
-        x2={width - PADDING.right}
-        y2={PADDING.top}
-        stroke={Colors.border}
-        strokeWidth={1}
-        strokeDasharray="4,4"
-      />
-      {/* Grid line at middle */}
-      <Line
-        x1={PADDING.left}
-        y1={PADDING.top + chartH / 2}
-        x2={width - PADDING.right}
-        y2={PADDING.top + chartH / 2}
-        stroke={Colors.border}
-        strokeWidth={1}
-        strokeDasharray="4,4"
-      />
-      {/* Polyline */}
-      <Polyline
-        points={polylinePoints}
-        fill="none"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-      {/* Dots */}
-      {points.map((p, i) => (
-        <Circle key={i} cx={p.x} cy={p.y} r={3} fill={color} />
-      ))}
-      {/* X-axis labels */}
-      {labelPoints.map((p, i) => (
-        <SvgText
-          key={i}
-          x={p.x}
-          y={height - 4}
-          fontSize={9}
-          fill={Colors.textMuted}
-          textAnchor="middle"
-        >
-          {p.label}
-        </SvgText>
-      ))}
-    </Svg>
-  );
-}
-
-// ── BAR CHART ─────────────────────────────────────────────────────────────────
-
-interface BarChartProps {
-  data: { label: string; value: number }[];
-  color: string;
-  width: number;
-  height?: number;
-}
-
-function BarChart({ data, color, width, height = 140 }: BarChartProps) {
-  const PADDING = { top: 16, bottom: 28, left: 8, right: 8 };
-  const chartW = width - PADDING.left - PADDING.right;
-  const chartH = height - PADDING.top - PADDING.bottom;
-
-  if (data.length === 0) {
-    return (
-      <View style={[styles.chartEmptyContainer, { width, height }]}>
-        <Text style={styles.emptyText}>Aucune donnée</Text>
-      </View>
-    );
-  }
-
-  const maxVal = Math.max(...data.map((d) => d.value), 1);
-  const barGap = 4;
-  const barW = Math.max(4, chartW / data.length - barGap);
-
-  return (
-    <Svg width={width} height={height}>
-      {data.map((d, i) => {
-        const barH = (d.value / maxVal) * chartH;
-        const x = PADDING.left + i * (barW + barGap);
-        const y = PADDING.top + chartH - barH;
-        return (
-          <G key={i}>
-            <Rect x={x} y={y} width={barW} height={barH} fill={color} rx={2} />
-            <SvgText
-              x={x + barW / 2}
-              y={height - 6}
-              fontSize={9}
-              fill={Colors.textMuted}
-              textAnchor="middle"
-            >
-              {d.label}
-            </SvgText>
-          </G>
-        );
-      })}
-    </Svg>
-  );
-}
-
 // ── SECTION HEADER ────────────────────────────────────────────────────────────
 
 function SectionHeader({ title }: { title: string }) {
@@ -222,10 +111,8 @@ function SectionHeader({ title }: { title: string }) {
 
 // ── MAIN COMPONENT ────────────────────────────────────────────────────────────
 
-export default function AnalyticsDashboard() {
+export default function HistoriqueScreen() {
   const insets = useSafeAreaInsets();
-  const { width: screenWidth } = useWindowDimensions();
-  const chartWidth = screenWidth - 32;
 
   const today = new Date();
   const thirtyDaysAgo = new Date(today);
@@ -238,18 +125,36 @@ export default function AnalyticsDashboard() {
     today.toISOString().split("T")[0]
   );
 
-  const { data: rawData, isLoading, error } = useQuery<AnalyticsRow[]>({
-    queryKey: ["/api/analytics"],
+  const { data: ventes, isLoading: loadingVentes, error: errorVentes } = useQuery<VenteRecord[]>({
+    queryKey: ["/api/ventes"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/analytics");
+      const res = await apiRequest("GET", "/api/ventes");
       return res.json();
     },
   });
 
-  // ── FILTERING ──
+  const { data: depenses, isLoading: loadingDepenses, error: errorDepenses } = useQuery<DepenseRecord[]>({
+    queryKey: ["/api/depenses"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/depenses");
+      return res.json();
+    },
+  });
 
-  const filtered = useMemo<AnalyticsRow[]>(() => {
-    if (!rawData) return [];
+  const { data: achats, isLoading: loadingAchats, error: errorAchats } = useQuery<AchatRecord[]>({
+    queryKey: ["/api/achats"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/achats");
+      return res.json();
+    },
+  });
+
+  const isLoading = loadingVentes || loadingDepenses || loadingAchats;
+  const error = errorVentes || errorDepenses || errorAchats;
+
+  // ── FILTERING & COMBINING ──
+
+  const entries = useMemo<HistoryEntry[]>(() => {
     const parseDate = (s: string): Date | null => {
       if (!s) return null;
       const d = new Date(s);
@@ -257,78 +162,70 @@ export default function AnalyticsDashboard() {
     };
     const from = parseDate(dateFrom);
     const to = parseDate(dateTo + "T23:59:59");
-    return rawData.filter((row) => {
-      const d = new Date(row.date);
+
+    const inRange = (dateStr: string) => {
+      const d = new Date(dateStr);
       if (from && d < from) return false;
       if (to && d > to) return false;
       return true;
-    });
-  }, [rawData, dateFrom, dateTo]);
+    };
+
+    const result: HistoryEntry[] = [];
+
+    for (const v of ventes ?? []) {
+      if (!inRange(v.date)) continue;
+      const prodNames = v.items.map((it) =>
+        `${it.produit.emoji ?? ""} ${it.produit.nom} ×${it.quantite}`.trim()
+      ).join(", ");
+      result.push({
+        key: `vente-${v.id}`,
+        type: "vente",
+        date: v.date,
+        label: prodNames || `Vente #${v.id}`,
+        amount: Number(v.total),
+        detail: v.note ?? "",
+      });
+    }
+
+    for (const d of depenses ?? []) {
+      if (!inRange(d.date)) continue;
+      result.push({
+        key: `depense-${d.id}`,
+        type: "depense",
+        date: d.date,
+        label: d.libelle,
+        amount: Number(d.montant),
+        detail: d.categorie,
+      });
+    }
+
+    for (const a of achats ?? []) {
+      if (!inRange(a.date)) continue;
+      result.push({
+        key: `achat-${a.id}`,
+        type: "achat",
+        date: a.date,
+        label: `${a.produit.emoji ?? ""} ${a.produit.nom} ×${a.quantite}`.trim(),
+        amount: Number(a.prixUnitaire) * a.quantite,
+        detail: a.fournisseur,
+      });
+    }
+
+    return result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [ventes, depenses, achats, dateFrom, dateTo]);
 
   // ── TOTALS ──
 
   const totals = useMemo(() => {
-    return filtered.reduce(
-      (acc, row) => ({
-        revenue: acc.revenue + row.revenue,
-        margin: acc.margin + row.margin,
-        quantity: acc.quantity + row.quantity,
+    return entries.reduce(
+      (acc, e) => ({
+        ventes: acc.ventes + (e.type === "vente" ? e.amount : 0),
+        achats: acc.achats + (e.type === "achat" ? e.amount : 0),
+        depenses: acc.depenses + (e.type === "depense" ? e.amount : 0),
       }),
-      { revenue: 0, margin: 0, quantity: 0 }
+      { ventes: 0, achats: 0, depenses: 0 }
     );
-  }, [filtered]);
-
-  // ── TABLE: group by date ──
-
-  const dailyRows = useMemo<DailyRow[]>(() => {
-    const map = new Map<string, DailyRow>();
-    for (const row of filtered) {
-      const existing = map.get(row.date);
-      if (existing) {
-        existing.revenue += row.revenue;
-        existing.quantity += row.quantity;
-        existing.margin += row.margin;
-      } else {
-        map.set(row.date, { date: row.date, revenue: row.revenue, quantity: row.quantity, margin: row.margin });
-      }
-    }
-    return Array.from(map.values()).sort((a, b) => b.date.localeCompare(a.date));
-  }, [filtered]);
-
-  // ── LINE CHART: revenue per day ──
-
-  const revenuePerDay = useMemo(() => {
-    return dailyRows
-      .slice()
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .map((row) => ({ label: formatDate(row.date), value: row.revenue }));
-  }, [dailyRows]);
-
-  // ── BAR CHART: revenue per hour ──
-
-  const revenuePerHour = useMemo(() => {
-    const hourMap: Record<number, number> = {};
-    for (const row of filtered) {
-      hourMap[row.hour] = (hourMap[row.hour] ?? 0) + row.revenue;
-    }
-    return Array.from({ length: 24 }, (_, h) => ({
-      label: `${h}`,
-      value: hourMap[h] ?? 0,
-    }));
-  }, [filtered]);
-
-  // ── BAR CHART: revenue per day of week ──
-
-  const revenuePerDow = useMemo(() => {
-    const dowMap: Record<number, number> = {};
-    for (const row of filtered) {
-      dowMap[row.dayOfWeek] = (dowMap[row.dayOfWeek] ?? 0) + row.revenue;
-    }
-    return Array.from({ length: 7 }, (_, d) => ({
-      label: DAY_LABELS[d],
-      value: dowMap[d] ?? 0,
-    }));
-  }, [filtered]);
+  }, [entries]);
 
   // ── RENDER ──
 
@@ -336,7 +233,7 @@ export default function AnalyticsDashboard() {
     return (
       <View style={[styles.centered, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Chargement des données…</Text>
+        <Text style={styles.loadingText}>Chargement de l'historique…</Text>
       </View>
     );
   }
@@ -360,8 +257,8 @@ export default function AnalyticsDashboard() {
     >
       {/* ── HEADER ── */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Text style={styles.headerTitle}>Analytiques</Text>
-        <Text style={styles.headerSub}>Analyse commerciale détaillée</Text>
+        <Text style={styles.headerTitle}>Historique</Text>
+        <Text style={styles.headerSub}>Toutes les transactions</Text>
       </View>
 
       {/* ── DATE FILTER ── */}
@@ -395,109 +292,78 @@ export default function AnalyticsDashboard() {
 
       {/* ── KPI CARDS ── */}
       <View style={styles.section}>
-        <SectionHeader title="Indicateurs clés" />
+        <SectionHeader title="Résumé de la période" />
         <View style={styles.kpiRow}>
           <KpiCard
-            label="Chiffre d'affaires"
-            value={formatFCFA(totals.revenue)}
+            label="Ventes"
+            value={formatFCFA(totals.ventes)}
             color={Colors.primary}
             icon="💰"
           />
           <KpiCard
-            label="Marge brute"
-            value={formatFCFA(totals.margin)}
-            color={Colors.success}
-            icon="📈"
+            label="Achats"
+            value={formatFCFA(totals.achats)}
+            color={Colors.info}
+            icon="📦"
           />
           <KpiCard
-            label="Qté vendue"
-            value={totals.quantity.toLocaleString("fr-FR")}
-            color={Colors.info}
-            icon="🛒"
+            label="Dépenses"
+            value={formatFCFA(totals.depenses)}
+            color={Colors.danger}
+            icon="💸"
           />
         </View>
       </View>
 
-      {/* ── LINE CHART: revenue over time ── */}
-      {revenuePerDay.length >= 2 && (
-        <View style={styles.section}>
-          <SectionHeader title="Chiffre d'affaires par jour" />
-          <View style={styles.chartCard}>
-            <LineChart
-              data={revenuePerDay}
-              color={Colors.primary}
-              width={chartWidth}
-              height={180}
-            />
-          </View>
-        </View>
-      )}
-
-      {/* ── BAR CHART: revenue per hour ── */}
+      {/* ── HISTORY TABLE ── */}
       <View style={styles.section}>
-        <SectionHeader title="CA par heure" />
-        <View style={styles.chartCard}>
-          <BarChart
-            data={revenuePerHour}
-            color={Colors.accent}
-            width={chartWidth}
-            height={140}
-          />
-        </View>
-      </View>
-
-      {/* ── BAR CHART: revenue per day of week ── */}
-      <View style={styles.section}>
-        <SectionHeader title="CA par jour de la semaine" />
-        <View style={styles.chartCard}>
-          <BarChart
-            data={revenuePerDow}
-            color={Colors.success}
-            width={chartWidth}
-            height={140}
-          />
-        </View>
-      </View>
-
-      {/* ── DATA TABLE ── */}
-      <View style={styles.section}>
-        <SectionHeader title={`Tableau des ventes (${dailyRows.length} jour${dailyRows.length !== 1 ? "s" : ""})`} />
+        <SectionHeader title={`Transactions (${entries.length})`} />
         <View style={styles.tableCard}>
           {/* Header row */}
           <View style={[styles.tableRow, styles.tableHeaderRow]}>
+            <Text style={[styles.tableCell, styles.tableHeaderCell, { flex: 1 }]}>Type</Text>
             <Text style={[styles.tableCell, styles.tableHeaderCell, { flex: 2 }]}>Date</Text>
-            <Text style={[styles.tableCell, styles.tableHeaderCell, { flex: 3, textAlign: "right" }]}>CA</Text>
-            <Text style={[styles.tableCell, styles.tableHeaderCell, { flex: 2, textAlign: "right" }]}>Qté</Text>
-            <Text style={[styles.tableCell, styles.tableHeaderCell, { flex: 3, textAlign: "right" }]}>Marge</Text>
+            <Text style={[styles.tableCell, styles.tableHeaderCell, { flex: 3 }]}>Libellé</Text>
+            <Text style={[styles.tableCell, styles.tableHeaderCell, { flex: 2, textAlign: "right" }]}>Montant</Text>
           </View>
-          {dailyRows.length === 0 ? (
+          {entries.length === 0 ? (
             <View style={styles.tableEmptyRow}>
-              <Text style={styles.emptyText}>Aucune vente sur cette période</Text>
+              <Text style={styles.emptyText}>Aucune transaction sur cette période</Text>
             </View>
           ) : (
-            dailyRows.map((row, i) => (
-              <View
-                key={row.date}
-                style={[styles.tableRow, i % 2 === 1 && styles.tableRowAlt]}
-              >
-                <Text style={[styles.tableCell, { flex: 2 }]}>{formatDate(row.date)}</Text>
-                <Text style={[styles.tableCell, styles.tableCellNumeric, { flex: 3 }]}>
-                  {formatFCFA(row.revenue)}
-                </Text>
-                <Text style={[styles.tableCell, styles.tableCellNumeric, { flex: 2 }]}>
-                  {row.quantity}
-                </Text>
-                <Text
-                  style={[
-                    styles.tableCell,
-                    styles.tableCellNumeric,
-                    { flex: 3, color: row.margin >= 0 ? Colors.success : Colors.danger },
-                  ]}
+            entries.map((entry, i) => {
+              const cfg = TYPE_CONFIG[entry.type];
+              return (
+                <View
+                  key={entry.key}
+                  style={[styles.tableRow, i % 2 === 1 && styles.tableRowAlt]}
                 >
-                  {formatFCFA(row.margin)}
-                </Text>
-              </View>
-            ))
+                  <View style={[styles.typeBadge, { backgroundColor: cfg.color + "1A", flex: 1 }]}>
+                    <Text style={[styles.typeBadgeText, { color: cfg.color }]}>
+                      {cfg.icon} {cfg.label}
+                    </Text>
+                  </View>
+                  <Text style={[styles.tableCell, { flex: 2 }]}>
+                    {formatDateTime(entry.date)}
+                  </Text>
+                  <Text style={[styles.tableCell, styles.tableCellLabel, { flex: 3 }]} numberOfLines={2}>
+                    {entry.label}
+                    {entry.detail ? (
+                      <Text style={styles.tableCellDetail}>{"\n"}{entry.detail}</Text>
+                    ) : null}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.tableCell,
+                      styles.tableCellNumeric,
+                      { flex: 2, color: entry.type === "vente" ? Colors.primary : Colors.danger },
+                    ]}
+                  >
+                    {entry.type === "vente" ? "+" : "-"}{formatFCFA(entry.amount)}
+                  </Text>
+                </View>
+              );
+            })
           )}
         </View>
       </View>
@@ -534,10 +400,6 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     fontSize: 13,
     textAlign: "center",
-  },
-  chartEmptyContainer: {
-    justifyContent: "center",
-    alignItems: "center",
   },
   // ── HEADER ──
   header: {
@@ -622,17 +484,6 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     lineHeight: 14,
   },
-  // ── CHART ──
-  chartCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
   // ── TABLE ──
   tableCard: {
     backgroundColor: Colors.surface,
@@ -646,6 +497,7 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -662,7 +514,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   tableCell: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.text,
   },
   tableHeaderCell: {
@@ -673,5 +525,27 @@ const styles = StyleSheet.create({
   },
   tableCellNumeric: {
     textAlign: "right",
+    fontWeight: "600",
+    fontSize: 12,
+  },
+  tableCellLabel: {
+    fontSize: 12,
+    color: Colors.text,
+    lineHeight: 17,
+  },
+  tableCellDetail: {
+    fontSize: 11,
+    color: Colors.textMuted,
+  },
+  // ── TYPE BADGE ──
+  typeBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 3,
+    alignSelf: "flex-start",
+  },
+  typeBadgeText: {
+    fontSize: 10,
+    fontWeight: "600",
   },
 });
