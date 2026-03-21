@@ -134,6 +134,8 @@ export const insertProduitSchema = createInsertSchema(produits).omit({
   id: true,
   userId: true,
   createdAt: true,
+}).extend({
+  prixAchat: z.string().optional().default("0"),
 });
 
 export const insertVenteSchema = z.object({
