@@ -153,12 +153,16 @@ export const insertDepenseSchema = createInsertSchema(depenses).omit({
   id: true,
   userId: true,
   createdAt: true,
+}).extend({
+  date: z.coerce.date().optional(),
 });
 
 export const insertAchatFournisseurSchema = createInsertSchema(achatsFournisseurs).omit({
   id: true,
   userId: true,
   createdAt: true,
+}).extend({
+  date: z.coerce.date().optional(),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

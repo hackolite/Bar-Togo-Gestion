@@ -344,7 +344,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── VENTES ──
   app.get("/api/ventes", requireAuth, async (req, res) => {
-    res.json(await storage.getVentes(req.session.userId!));
+    try {
+      res.json(await storage.getVentes(req.session.userId!));
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
   });
 
   app.post("/api/ventes", requireAuth, async (req, res) => {
@@ -358,7 +362,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── DÉPENSES ──
   app.get("/api/depenses", requireAuth, async (req, res) => {
-    res.json(await storage.getDepenses(req.session.userId!));
+    try {
+      res.json(await storage.getDepenses(req.session.userId!));
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
   });
 
   app.post("/api/depenses", requireAuth, async (req, res) => {
@@ -390,7 +398,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── ACHATS FOURNISSEURS ──
   app.get("/api/achats", requireAuth, async (req, res) => {
-    res.json(await storage.getAchatsFournisseurs(req.session.userId!));
+    try {
+      res.json(await storage.getAchatsFournisseurs(req.session.userId!));
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
   });
 
   app.post("/api/achats", requireAuth, async (req, res) => {
