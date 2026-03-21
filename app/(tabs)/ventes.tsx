@@ -11,6 +11,7 @@ import {
   Platform,
   TextInput,
   Image,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -356,9 +357,309 @@ const nv = StyleSheet.create({
   emptySearchSub: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted },
 });
 
+const CSV_VENTES_EXEMPLE = `date,produit,quantite,prixUnitaire,note
+2024-01-05,Flag Spéciale 65cl,4,800,Table 3
+2024-01-05,Coca-Cola 33cl,2,400,
+2024-01-05,Chips Crunchy,3,300,
+2024-01-06,Castel Beer 65cl,3,800,
+2024-01-06,Flag Spéciale 65cl,5,800,
+2024-01-06,Fanta Orange 33cl,2,400,
+2024-01-07,Mojito,2,2000,VIP
+2024-01-07,Flag Spéciale 65cl,6,800,
+2024-01-07,Brochettes de bœuf (5 pics),2,2000,
+2024-01-12,Heineken 33cl,4,1000,
+2024-01-12,Flag Spéciale 65cl,3,800,
+2024-01-13,Coca-Cola 33cl,5,400,
+2024-01-13,Castel Beer 65cl,4,800,
+2024-01-19,Flag Spéciale 65cl,8,800,Weekend
+2024-01-19,Guilele 65cl,3,750,
+2024-01-19,Mojito,3,2000,
+2024-01-20,Castel Beer 65cl,6,800,Weekend
+2024-01-20,Flag Spéciale 33cl,4,500,
+2024-01-26,Flag Spéciale 65cl,5,800,
+2024-01-27,Heineken 33cl,3,1000,
+2024-02-02,Flag Spéciale 65cl,4,800,
+2024-02-02,Coca-Cola 33cl,3,400,
+2024-02-03,Castel Beer 65cl,5,800,
+2024-02-03,Mojito,2,2000,
+2024-02-09,Flag Spéciale 65cl,7,800,
+2024-02-10,Guilele 65cl,4,750,
+2024-02-10,Malta Guinness 33cl,2,500,
+2024-02-14,Champagne (flûte),2,4000,Saint-Valentin
+2024-02-14,Mojito,4,2000,Saint-Valentin
+2024-02-16,Flag Spéciale 65cl,6,800,
+2024-02-17,Castel Beer 65cl,5,800,
+2024-03-01,Flag Spéciale 65cl,5,800,
+2024-03-01,Fanta Orange 33cl,3,400,
+2024-03-02,Heineken 33cl,4,1000,
+2024-03-08,Mojito,3,2000,
+2024-03-08,Flag Spéciale 65cl,6,800,
+2024-03-09,Castel Beer 65cl,5,800,
+2024-03-15,Flag Spéciale 65cl,4,800,
+2024-03-16,Coca-Cola 33cl,4,400,
+2024-03-22,Flag Spéciale 65cl,7,800,
+2024-03-23,Guilele 65cl,3,750,
+2024-04-05,Flag Spéciale 65cl,5,800,
+2024-04-06,Castel Beer 65cl,4,800,
+2024-04-12,Heineken 33cl,3,1000,
+2024-04-13,Mojito,2,2000,
+2024-04-19,Flag Spéciale 65cl,6,800,
+2024-04-20,Coca-Cola 33cl,3,400,
+2024-05-01,Flag Spéciale 65cl,10,800,Fête du travail
+2024-05-01,Castel Beer 65cl,8,800,Fête du travail
+2024-05-01,Mojito,5,2000,Fête du travail
+2024-05-04,Flag Spéciale 65cl,5,800,
+2024-05-11,Heineken 33cl,4,1000,
+2024-05-18,Flag Spéciale 65cl,6,800,
+2024-06-01,Flag Spéciale 65cl,5,800,
+2024-06-07,Castel Beer 65cl,4,800,
+2024-06-14,Mojito,3,2000,
+2024-06-21,Flag Spéciale 65cl,7,800,
+2024-07-04,Flag Spéciale 65cl,6,800,
+2024-07-04,Guilele 65cl,4,750,
+2024-07-13,Castel Beer 65cl,5,800,
+2024-08-02,Flag Spéciale 65cl,5,800,
+2024-08-10,Heineken 33cl,3,1000,
+2024-09-06,Flag Spéciale 65cl,6,800,
+2024-09-07,Mojito,2,2000,
+2024-10-04,Flag Spéciale 65cl,5,800,
+2024-10-12,Castel Beer 65cl,4,800,
+2024-11-01,Flag Spéciale 65cl,7,800,
+2024-11-22,Heineken 33cl,3,1000,
+2024-12-24,Flag Spéciale 65cl,12,800,Noël
+2024-12-24,Castel Beer 65cl,8,800,Noël
+2024-12-24,Mojito,6,2000,Noël
+2024-12-31,Flag Spéciale 65cl,15,800,Réveillon
+2024-12-31,Heineken 33cl,8,1000,Réveillon
+2024-12-31,Mojito,8,2000,Réveillon
+2025-01-03,Flag Spéciale 65cl,5,800,
+2025-01-10,Castel Beer 65cl,4,800,
+2025-01-17,Flag Spéciale 65cl,6,800,
+2025-02-07,Mojito,3,2000,
+2025-02-08,Flag Spéciale 65cl,7,800,
+2025-02-14,Champagne (flûte),3,4000,Saint-Valentin`;
+
+// ── MODAL: IMPORT CSV VENTES ──
+function ImportCSVVentesModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [csvText, setCsvText] = useState("");
+  const [skipFirstLine, setSkipFirstLine] = useState(true);
+  const [preview, setPreview] = useState<string[][]>([]);
+  const [result, setResult] = useState<{ count: number; errors: string[] } | null>(null);
+  const [step, setStep] = useState<"edit" | "preview" | "done">("edit");
+
+  React.useEffect(() => {
+    if (visible) {
+      setCsvText("");
+      setPreview([]);
+      setResult(null);
+      setStep("edit");
+    }
+  }, [visible]);
+
+  const parsePreview = () => {
+    const lines = csvText.split(/\r?\n/).filter((l) => l.trim());
+    const dataLines = skipFirstLine ? lines.slice(1) : lines;
+    const parsed = dataLines.slice(0, 10).map((l) =>
+      l.split(",").map((c) => c.trim().replace(/^"|"$/g, ""))
+    );
+    setPreview(parsed);
+    setStep("preview");
+  };
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/ventes/import-csv", { csvText, skipFirstLine });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["/api/ventes"] });
+      qc.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setResult(data);
+      setStep("done");
+    },
+    onError: (e: any) => Alert.alert("Erreur", e.message),
+  });
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="formSheet" onRequestClose={onClose}>
+      <View style={icv.container}>
+        <View style={icv.handle} />
+        <View style={icv.header}>
+          <Text style={icv.title}>Importer des ventes CSV</Text>
+          <Pressable onPress={onClose} hitSlop={10}>
+            <Ionicons name="close" size={24} color={Colors.textMuted} />
+          </Pressable>
+        </View>
+
+        <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <View style={[icv.body, { gap: 16 }]}>
+            {step === "edit" && (
+              <>
+                <View style={icv.formatBox}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                    <Ionicons name="information-circle-outline" size={16} color={Colors.primary} />
+                    <Text style={icv.formatTitle}>Format attendu :</Text>
+                  </View>
+                  <Text style={icv.formatCode}>date,produit,quantite,prixUnitaire,note</Text>
+                  <Text style={[icv.formatCode, { color: Colors.textMuted, marginTop: 4 }]}>
+                    date: YYYY-MM-DD (ex: 2024-03-15){"\n"}produit: nom exact du produit
+                  </Text>
+                  <Pressable style={icv.exampleBtn} onPress={() => setCsvText(CSV_VENTES_EXEMPLE)}>
+                    <Ionicons name="flash-outline" size={14} color={Colors.primary} />
+                    <Text style={icv.exampleBtnText}>{"Charger les données d'exemple (80 ventes)"}</Text>
+                  </Pressable>
+                </View>
+
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Pressable
+                    style={{ padding: 2 }}
+                    onPress={() => setSkipFirstLine(!skipFirstLine)}
+                  >
+                    <Ionicons
+                      name={skipFirstLine ? "checkbox" : "square-outline"}
+                      size={18}
+                      color={skipFirstLine ? Colors.primary : Colors.textMuted}
+                    />
+                  </Pressable>
+                  <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.text }}>
+                    La 1ère ligne est un en-tête (ignorer)
+                  </Text>
+                </View>
+
+                <View>
+                  <Text style={icv.fieldLabel}>Collez votre CSV ici</Text>
+                  <TextInput
+                    style={icv.textarea}
+                    multiline
+                    value={csvText}
+                    onChangeText={setCsvText}
+                    placeholder={`date,produit,quantite,prixUnitaire,note\n2024-01-15,Flag Spéciale 65cl,4,800,Table 5`}
+                    placeholderTextColor={Colors.textMuted}
+                    textAlignVertical="top"
+                    autoCorrect={false}
+                    autoCapitalize="none"
+                  />
+                </View>
+              </>
+            )}
+
+            {step === "preview" && (
+              <>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Ionicons name="eye-outline" size={18} color={Colors.primary} />
+                  <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.text }}>
+                    Aperçu ({preview.length} lignes{preview.length === 10 ? "+" : ""})
+                  </Text>
+                </View>
+                {preview.map((row, i) => (
+                  <View key={i} style={icv.previewRow}>
+                    <Text style={icv.previewDate}>{row[0] || "—"}</Text>
+                    <Text style={icv.previewNom} numberOfLines={1}>{row[1] || "—"}</Text>
+                    <Text style={icv.previewDetail}>x{row[2] || "0"} · {row[3] || "0"} FCFA</Text>
+                    {row[4] ? <Text style={icv.previewNote}>{row[4]}</Text> : null}
+                  </View>
+                ))}
+                <Pressable
+                  style={{ flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start" }}
+                  onPress={() => setStep("edit")}
+                >
+                  <Ionicons name="arrow-back" size={16} color={Colors.textMuted} />
+                  <Text style={{ fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.textMuted }}>Modifier</Text>
+                </Pressable>
+              </>
+            )}
+
+            {step === "done" && result && (
+              <View style={icv.doneBox}>
+                <Text style={{ fontSize: 48 }}>✅</Text>
+                <Text style={icv.doneTitle}>{result.count} vente(s) importée(s)</Text>
+                {result.errors.length > 0 && (
+                  <View style={icv.errorsBox}>
+                    <Text style={icv.errorsTitle}>{result.errors.length} erreur(s) :</Text>
+                    {result.errors.map((e, i) => (
+                      <Text key={i} style={icv.errorLine}>{e}</Text>
+                    ))}
+                  </View>
+                )}
+                <Pressable style={[icv.saveBtn, { marginTop: 12 }]} onPress={onClose}>
+                  <Text style={icv.saveBtnText}>Fermer</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+
+        {step !== "done" && (
+          <View style={icv.footer}>
+            {step === "edit" ? (
+              <Pressable
+                style={({ pressed }) => [icv.saveBtn, { opacity: pressed || !csvText.trim() ? 0.6 : 1 }]}
+                onPress={parsePreview}
+                disabled={!csvText.trim()}
+              >
+                <Ionicons name="eye-outline" size={18} color="#fff" />
+                <Text style={icv.saveBtnText}>Prévisualiser</Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                style={({ pressed }) => [icv.saveBtn, { opacity: pressed ? 0.85 : 1, backgroundColor: "#52B788" }]}
+                onPress={() => mutation.mutate()}
+                disabled={mutation.isPending}
+              >
+                {mutation.isPending ? (
+                  <>
+                    <ActivityIndicator color="#fff" />
+                    <Text style={icv.saveBtnText}>Importation...</Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
+                    <Text style={icv.saveBtnText}>Importer {preview.length} vente(s)</Text>
+                  </>
+                )}
+              </Pressable>
+            )}
+          </View>
+        )}
+      </View>
+    </Modal>
+  );
+}
+
+const icv = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.surface },
+  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center", marginTop: 8, marginBottom: 4 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  title: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text },
+  body: { padding: 20 },
+  formatBox: { backgroundColor: Colors.primary + "0D", borderRadius: 12, padding: 14, borderWidth: 1, borderColor: Colors.primary + "25" },
+  formatTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.primary },
+  formatCode: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.text, fontVariant: ["tabular-nums"] },
+  exampleBtn: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 10, alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: Colors.primary + "15" },
+  exampleBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: Colors.primary },
+  fieldLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: Colors.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 },
+  textarea: { backgroundColor: Colors.background, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.border, padding: 14, fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.text, minHeight: 180, maxHeight: 260 },
+  previewRow: { backgroundColor: Colors.background, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: Colors.border, gap: 2 },
+  previewDate: { fontSize: 11, fontFamily: "Inter_500Medium", color: Colors.textMuted },
+  previewNom: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.text },
+  previewDetail: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.primary },
+  previewNote: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textMuted },
+  doneBox: { alignItems: "center", paddingVertical: 20, gap: 8 },
+  doneTitle: { fontSize: 16, fontFamily: "Inter_700Bold", color: Colors.text },
+  errorsBox: { backgroundColor: "#FEF2F2", borderRadius: 10, padding: 12, width: "100%", gap: 4 },
+  errorsTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.danger },
+  errorLine: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.danger },
+  footer: { padding: 20, borderTopWidth: 1, borderTopColor: Colors.border },
+  saveBtn: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 },
+  saveBtnText: { color: "#fff", fontSize: 16, fontFamily: "Inter_700Bold" },
+});
+
 export default function VentesScreen() {
   const insets = useSafeAreaInsets();
   const [modalVisible, setModalVisible] = useState(false);
+  const [csvModalVisible, setCsvModalVisible] = useState(false);
 
   const { data: ventes = [], isLoading: loadingVentes } = useQuery<VenteRecord[]>({
     queryKey: ["/api/ventes"],
@@ -420,12 +721,20 @@ export default function VentesScreen() {
           <Text style={vs.title}>Ventes</Text>
           <Text style={vs.subtitle}>Aujourd'hui: {formatFCFA(totalJour)}</Text>
         </View>
-        <Pressable
-          style={({ pressed }) => [vs.addBtn, { opacity: pressed ? 0.85 : 1 }]}
-          onPress={() => setModalVisible(true)}
-        >
-          <Ionicons name="add" size={22} color="#fff" />
-        </Pressable>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Pressable
+            style={({ pressed }) => [vs.importBtn, { opacity: pressed ? 0.85 : 1 }]}
+            onPress={() => setCsvModalVisible(true)}
+          >
+            <Ionicons name="cloud-upload-outline" size={18} color={Colors.primary} />
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [vs.addBtn, { opacity: pressed ? 0.85 : 1 }]}
+            onPress={() => setModalVisible(true)}
+          >
+            <Ionicons name="add" size={22} color="#fff" />
+          </Pressable>
+        </View>
       </View>
 
       {loadingVentes ? (
@@ -457,6 +766,10 @@ export default function VentesScreen() {
         onClose={() => setModalVisible(false)}
         produits={produits}
       />
+      <ImportCSVVentesModal
+        visible={csvModalVisible}
+        onClose={() => setCsvModalVisible(false)}
+      />
     </View>
   );
 }
@@ -474,6 +787,11 @@ const vs = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
     shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+  },
+  importBtn: {
+    width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.primary + "15",
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1.5, borderColor: Colors.primary + "40",
   },
   list: { paddingHorizontal: 20, gap: 12 },
   venteCard: {
