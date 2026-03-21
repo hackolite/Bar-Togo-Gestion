@@ -171,10 +171,13 @@ export class DatabaseStorage implements IStorage {
     achat: InsertAchatFournisseur & { userId: number }
   ): Promise<AchatFournisseur & { produit: Produit }> {
     const [a] = await db.insert(achatsFournisseurs).values(achat).returning();
-    // Update stock
+    // Update stock and prixAchat with the latest purchase price
     await db
       .update(produits)
-      .set({ stock: sql`${produits.stock} + ${achat.quantite}` })
+      .set({
+        stock: sql`${produits.stock} + ${achat.quantite}`,
+        prixAchat: achat.prixUnitaire.toString(),
+      })
       .where(eq(produits.id, achat.produitId));
     const [p] = await db.select().from(produits).where(eq(produits.id, achat.produitId));
     return { ...a, produit: p };
