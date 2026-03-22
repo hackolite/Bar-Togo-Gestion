@@ -73,11 +73,25 @@ export const depenses = pgTable("depenses", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const fournisseurs = pgTable("fournisseurs", {
+  id: serial("id").primaryKey(),
+  nom: text("nom").notNull(),
+  telephone: text("telephone"),
+  email: text("email"),
+  adresse: text("adresse"),
+  note: text("note"),
+  userId: integer("user_id")
+    .references(() => users.id)
+    .notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const achatsFournisseurs = pgTable("achats_fournisseurs", {
   id: serial("id").primaryKey(),
   produitId: integer("produit_id")
     .references(() => produits.id)
     .notNull(),
+  fournisseurId: integer("fournisseur_id").references(() => fournisseurs.id),
   quantite: integer("quantite").notNull(),
   prixUnitaire: numeric("prix_unitaire", { precision: 12, scale: 2 }).notNull(),
   fournisseur: text("fournisseur").notNull().default("Autre"),
@@ -94,6 +108,12 @@ export const usersRelations = relations(users, ({ many }) => ({
   ventes: many(ventes),
   depenses: many(depenses),
   achatsFournisseurs: many(achatsFournisseurs),
+  fournisseurs: many(fournisseurs),
+}));
+
+export const fournisseursRelations = relations(fournisseurs, ({ one, many }) => ({
+  user: one(users, { fields: [fournisseurs.userId], references: [users.id] }),
+  achats: many(achatsFournisseurs),
 }));
 
 export const produitsRelations = relations(produits, ({ one, many }) => ({
@@ -122,6 +142,7 @@ export const depensesRelations = relations(depenses, ({ one }) => ({
 export const achatsFournisseursRelations = relations(achatsFournisseurs, ({ one }) => ({
   user: one(users, { fields: [achatsFournisseurs.userId], references: [users.id] }),
   produit: one(produits, { fields: [achatsFournisseurs.produitId], references: [produits.id] }),
+  fournisseurRel: one(fournisseurs, { fields: [achatsFournisseurs.fournisseurId], references: [fournisseurs.id] }),
 }));
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -165,6 +186,12 @@ export const insertAchatFournisseurSchema = createInsertSchema(achatsFournisseur
   date: z.coerce.date().optional(),
 });
 
+export const insertFournisseurSchema = createInsertSchema(fournisseurs).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Produit = typeof produits.$inferSelect;
@@ -172,7 +199,9 @@ export type Vente = typeof ventes.$inferSelect;
 export type VenteItem = typeof venteItems.$inferSelect;
 export type Depense = typeof depenses.$inferSelect;
 export type AchatFournisseur = typeof achatsFournisseurs.$inferSelect;
+export type Fournisseur = typeof fournisseurs.$inferSelect;
 export type InsertProduit = z.infer<typeof insertProduitSchema>;
 export type InsertVente = z.infer<typeof insertVenteSchema>;
 export type InsertDepense = z.infer<typeof insertDepenseSchema>;
 export type InsertAchatFournisseur = z.infer<typeof insertAchatFournisseurSchema>;
+export type InsertFournisseur = z.infer<typeof insertFournisseurSchema>;

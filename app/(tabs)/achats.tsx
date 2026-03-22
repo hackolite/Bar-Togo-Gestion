@@ -31,6 +31,12 @@ interface Produit {
   stock: number;
 }
 
+interface Fournisseur {
+  id: number;
+  nom: string;
+  telephone?: string;
+}
+
 interface AchatFournisseur {
   id: number;
   produitId: number;
@@ -81,9 +87,15 @@ function AchatModal({
   const [quantite, setQuantite] = useState("1");
   const [prixUnitaire, setPrixUnitaire] = useState("");
   const [fournisseur, setFournisseur] = useState("");
+  const [fournisseurId, setFournisseurId] = useState<number | null>(null);
+  const [showFournisseurList, setShowFournisseurList] = useState(false);
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [step, setStep] = useState<"produit" | "details">("produit");
+
+  const { data: fournisseurs = [] } = useQuery<Fournisseur[]>({
+    queryKey: ["/api/fournisseurs"],
+  });
 
   React.useEffect(() => {
     if (visible) {
@@ -93,11 +105,17 @@ function AchatModal({
       setQuantite("1");
       setPrixUnitaire(prod && prod.prixAchat !== "0" ? prod.prixAchat : "");
       setFournisseur("");
+      setFournisseurId(null);
+      setShowFournisseurList(false);
       setNote("");
       setError("");
       setStep(prod ? "details" : "produit");
     }
   }, [visible, initialProduit]);
+
+  const filteredFournisseurs = fournisseurs.filter((f) =>
+    f.nom.toLowerCase().includes(fournisseur.toLowerCase())
+  );
 
   const filteredProduits = produits.filter(
     (p) =>
@@ -113,7 +131,7 @@ function AchatModal({
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const body = {
+      const body: Record<string, unknown> = {
         produitId: selectedProduit!.id,
         quantite: parseInt(quantite),
         prixUnitaire,
@@ -121,6 +139,7 @@ function AchatModal({
         note: note || undefined,
         date: new Date().toISOString(),
       };
+      if (fournisseurId) body.fournisseurId = fournisseurId;
       const res = await apiRequest("POST", "/api/achats", body);
       return res.json();
     },
@@ -284,14 +303,64 @@ function AchatModal({
 
               <View style={am.field}>
                 <Text style={am.label}>Fournisseur</Text>
-                <TextInput
-                  style={am.input}
-                  placeholder="Nom du fournisseur"
-                  placeholderTextColor={Colors.textMuted}
-                  value={fournisseur}
-                  onChangeText={setFournisseur}
-                  autoCapitalize="words"
-                />
+                {fournisseurId ? (
+                  <View style={am.fournisseurSelected}>
+                    <View style={am.fournisseurAvatarSm}>
+                      <Text style={am.fournisseurAvatarSmText}>{fournisseur.charAt(0)}</Text>
+                    </View>
+                    <Text style={am.fournisseurSelectedNom} numberOfLines={1}>{fournisseur}</Text>
+                    <Pressable
+                      onPress={() => { setFournisseur(""); setFournisseurId(null); setShowFournisseurList(false); }}
+                      hitSlop={8}
+                    >
+                      <Ionicons name="close-circle" size={18} color={Colors.textMuted} />
+                    </Pressable>
+                  </View>
+                ) : (
+                  <>
+                    <View style={am.fournisseurInputRow}>
+                      <Ionicons name="business-outline" size={16} color={Colors.textMuted} style={{ marginLeft: 12 }} />
+                      <TextInput
+                        style={am.fournisseurInput}
+                        placeholder="Saisir ou choisir un fournisseur..."
+                        placeholderTextColor={Colors.textMuted}
+                        value={fournisseur}
+                        onChangeText={(t) => { setFournisseur(t); setFournisseurId(null); setShowFournisseurList(true); }}
+                        onFocus={() => setShowFournisseurList(true)}
+                        autoCapitalize="words"
+                      />
+                      {fournisseur ? (
+                        <Pressable onPress={() => { setFournisseur(""); setFournisseurId(null); }} hitSlop={8} style={{ marginRight: 12 }}>
+                          <Ionicons name="close-circle" size={16} color={Colors.textMuted} />
+                        </Pressable>
+                      ) : null}
+                    </View>
+                    {showFournisseurList && filteredFournisseurs.length > 0 && (
+                      <View style={am.fournisseurDropdown}>
+                        {filteredFournisseurs.slice(0, 5).map((f) => (
+                          <Pressable
+                            key={f.id}
+                            style={({ pressed }) => [am.fournisseurOption, { opacity: pressed ? 0.8 : 1 }]}
+                            onPress={() => {
+                              setFournisseur(f.nom);
+                              setFournisseurId(f.id);
+                              setShowFournisseurList(false);
+                            }}
+                          >
+                            <View style={am.fournisseurAvatarSm}>
+                              <Text style={am.fournisseurAvatarSmText}>{f.nom.charAt(0)}</Text>
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={am.fournisseurOptionNom}>{f.nom}</Text>
+                              {f.telephone ? <Text style={am.fournisseurOptionTel}>{f.telephone}</Text> : null}
+                            </View>
+                            <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} />
+                          </Pressable>
+                        ))}
+                      </View>
+                    )}
+                  </>
+                )}
               </View>
 
               {total > 0 && (
@@ -374,6 +443,16 @@ const am = StyleSheet.create({
   footer: { padding: 20, borderTopWidth: 1, borderTopColor: Colors.border },
   saveBtn: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 4 },
   saveBtnText: { color: "#fff", fontSize: 16, fontFamily: "Inter_700Bold" },
+  fournisseurInputRow: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.background, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.border, gap: 8 },
+  fournisseurInput: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular", color: Colors.text, paddingVertical: 12, paddingHorizontal: 6 },
+  fournisseurSelected: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: Colors.accent + "12", borderRadius: 12, padding: 12, borderWidth: 1.5, borderColor: Colors.accent + "30" },
+  fournisseurSelectedNom: { flex: 1, fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.text },
+  fournisseurDropdown: { marginTop: 6, backgroundColor: Colors.surface, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.border, overflow: "hidden" },
+  fournisseurOption: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  fournisseurAvatarSm: { width: 32, height: 32, borderRadius: 8, backgroundColor: Colors.accent + "20", alignItems: "center", justifyContent: "center" },
+  fournisseurAvatarSmText: { fontSize: 14, fontFamily: "Inter_700Bold", color: Colors.accent },
+  fournisseurOptionNom: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.text },
+  fournisseurOptionTel: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted },
 });
 
 // ── ÉCRAN ACHATS (CATALOGUE) ──

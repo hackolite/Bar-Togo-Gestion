@@ -33,6 +33,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "square.3.layers.3d", selected: "square.2.layers.3d.fill" }} />
         <Label>Stock</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="fournisseurs">
+        <Icon sf={{ default: "building.2", selected: "building.2.fill" }} />
+        <Label>Fournisseurs</Label>
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
@@ -118,6 +122,15 @@ function ClassicTabLayout() {
           title: "Stock",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="layers-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="fournisseurs"
+        options={{
+          title: "Fournisseurs",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="business-outline" size={size} color={color} />
           ),
         }}
       />
