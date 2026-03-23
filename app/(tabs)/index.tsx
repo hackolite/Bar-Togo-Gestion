@@ -51,6 +51,89 @@ interface DashStats {
   alertesStock: { id: number; nom: string; stock: number; categorie: string }[];
 }
 
+interface BeneficePoint {
+  label: string;
+  ventes: number;
+  cogs: number;
+  depenses: number;
+  benefice: number;
+}
+
+interface BeneficeEvolution {
+  derniers7jours: BeneficePoint[];
+  derniers12mois: BeneficePoint[];
+}
+
+// ── COMPOSANT : GRAPHIQUE BARRES BÉNÉFICE ──
+function fmtShort(v: number): string {
+  const abs = Math.abs(v);
+  if (abs >= 1_000_000) return (v / 1_000_000).toFixed(1).replace(".", ",") + "M";
+  if (abs >= 1_000) return Math.round(v / 1_000) + "k";
+  return Math.round(v).toString();
+}
+
+function BeneficeBarChart({ data }: { data: BeneficePoint[] }) {
+  const BAR_W = 34;
+  const BAR_GAP = 8;
+  const PAD_LEFT = 4;
+  const TOP_PAD = 20;
+  const BAR_AREA_H = 110;
+  const BOTTOM_PAD = 30;
+  const SVG_H = TOP_PAD + BAR_AREA_H + BOTTOM_PAD;
+  const chartW = data.length * (BAR_W + BAR_GAP) + PAD_LEFT;
+
+  const maxBenef = Math.max(...data.map((d) => d.benefice), 0);
+  const minBenef = Math.min(...data.map((d) => d.benefice), 0);
+  const range = Math.max(maxBenef - minBenef, 1);
+  const zeroY = TOP_PAD + (maxBenef / range) * BAR_AREA_H;
+
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
+      <Svg width={chartW} height={SVG_H}>
+        {/* Zero line */}
+        <Line
+          x1={0} y1={zeroY} x2={chartW} y2={zeroY}
+          stroke={Colors.border} strokeWidth={1.2}
+          strokeDasharray="4 3"
+        />
+        {data.map((point, i) => {
+          const isPositive = point.benefice >= 0;
+          const color = isPositive ? Colors.success : Colors.danger;
+          const x = PAD_LEFT + i * (BAR_W + BAR_GAP);
+          const barH = Math.max(Math.abs(point.benefice) / range * BAR_AREA_H, 2);
+          const barY = isPositive ? zeroY - barH : zeroY;
+          const valueLabelY = isPositive
+            ? Math.max(barY - 4, TOP_PAD - 2)
+            : barY + barH + 10;
+
+          return (
+            <G key={i}>
+              <Rect
+                x={x} y={barY} width={BAR_W} height={barH}
+                rx={5} fill={color} opacity={0.82}
+              />
+              <SvgText
+                x={x + BAR_W / 2} y={valueLabelY}
+                textAnchor="middle" fontSize={8}
+                fill={color} fontFamily="Inter_600SemiBold"
+              >
+                {fmtShort(point.benefice)}
+              </SvgText>
+              <SvgText
+                x={x + BAR_W / 2} y={TOP_PAD + BAR_AREA_H + BOTTOM_PAD - 8}
+                textAnchor="middle" fontSize={9}
+                fill={Colors.textMuted} fontFamily="Inter_500Medium"
+              >
+                {point.label}
+              </SvgText>
+            </G>
+          );
+        })}
+      </Svg>
+    </ScrollView>
+  );
+}
+
 // ── COMPOSANT : GRAPHIQUE BARRES HORIZONTAL ──
 function ComparisonChart({
   labelA,
@@ -202,6 +285,14 @@ export default function DashboardScreen() {
     queryKey: ["/api/dashboard"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/dashboard");
+      return res.json();
+    },
+  });
+
+  const { data: evolution } = useQuery<BeneficeEvolution>({
+    queryKey: ["/api/benefice-evolution"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/benefice-evolution");
       return res.json();
     },
   });
@@ -433,6 +524,40 @@ export default function DashboardScreen() {
               <Ionicons name="storefront-outline" size={52} color={Colors.border} />
               <Text style={styles.emptyText}>Aucune activité aujourd'hui</Text>
               <Text style={styles.emptySubText}>Commencez à enregistrer vos ventes</Text>
+            </View>
+          )}
+
+          {/* ── ÉVOLUTION DU BÉNÉFICE : 7 DERNIERS JOURS ── */}
+          {evolution && (
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <View style={styles.cardTitleRow}>
+                  <Ionicons name="bar-chart" size={18} color={Colors.primary} />
+                  <Text style={styles.cardTitle}>Bénéfice — 7 derniers jours</Text>
+                </View>
+              </View>
+              <BeneficeBarChart data={evolution.derniers7jours} />
+              <View style={styles.legendRow}>
+                <LegendDot color={Colors.success} label="Positif" />
+                <LegendDot color={Colors.danger} label="Négatif" />
+              </View>
+            </View>
+          )}
+
+          {/* ── ÉVOLUTION DU BÉNÉFICE : 12 DERNIERS MOIS ── */}
+          {evolution && (
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <View style={styles.cardTitleRow}>
+                  <Ionicons name="bar-chart" size={18} color={Colors.accent} />
+                  <Text style={styles.cardTitle}>Bénéfice — 12 derniers mois</Text>
+                </View>
+              </View>
+              <BeneficeBarChart data={evolution.derniers12mois} />
+              <View style={styles.legendRow}>
+                <LegendDot color={Colors.success} label="Positif" />
+                <LegendDot color={Colors.danger} label="Négatif" />
+              </View>
             </View>
           )}
         </>
