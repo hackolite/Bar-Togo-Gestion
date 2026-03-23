@@ -230,6 +230,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/benefice-evolution", requireAuth, async (req, res) => {
+    try {
+      const data = await storage.getBeneficeEvolution(req.session.userId!);
+      res.json(data);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   // ── PRODUITS ──
   app.get("/api/produits", requireAuth, async (req, res) => {
     res.json(await storage.getProduits(req.session.userId!));
