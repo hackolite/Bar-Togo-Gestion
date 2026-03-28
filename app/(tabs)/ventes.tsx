@@ -134,6 +134,7 @@ function NouvelleVenteModal({
       qc.invalidateQueries({ queryKey: ["/api/ventes"] });
       qc.invalidateQueries({ queryKey: ["/api/dashboard"] });
       qc.invalidateQueries({ queryKey: ["/api/produits"] });
+      qc.invalidateQueries({ queryKey: ["/api/benefice-evolution"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onClose();
     },
@@ -475,6 +476,7 @@ function ImportCSVVentesModal({ visible, onClose }: { visible: boolean; onClose:
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["/api/ventes"] });
       qc.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      qc.invalidateQueries({ queryKey: ["/api/benefice-evolution"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setResult(data);
       setStep("done");
