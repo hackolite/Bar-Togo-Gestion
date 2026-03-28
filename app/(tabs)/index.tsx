@@ -42,7 +42,7 @@ interface DashStats {
   totalVentesHier: number;
   totalAchatsHier: number;
   totalDepensesHier: number;
-  topProduits: { nom: string; quantite: number; total: number }[];
+  topProduits: { nom: string; quantite: number; total: number; benefice: number }[];
   previsionnel: {
     totalDepensesFixesMois: number;
     provisionnementJournalier: number;
@@ -562,7 +562,9 @@ export default function DashboardScreen() {
                   <Text style={styles.topNom} numberOfLines={1}>{p.nom}</Text>
                   <View style={styles.topRight}>
                     <Text style={styles.topQte}>{p.quantite} vendus</Text>
-                    <Text style={styles.topTotal}>{formatFCFA(p.total)}</Text>
+                    <Text style={[styles.topTotal, { color: p.benefice >= 0 ? Colors.success : Colors.danger }]}>
+                      {p.benefice >= 0 ? "+" : ""}{formatFCFA(p.benefice)}
+                    </Text>
                   </View>
                 </View>
               ))}

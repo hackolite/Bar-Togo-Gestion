@@ -59,11 +59,20 @@ export interface IStorage {
     ventesAujourdhui: number;
     achatsAujourdhui: number;
     depensesAujourdhui: number;
-    beneficeAujourdhui: number;
+    coutsVentesAujourdhui: number;
+    beneficeNetAujourdhui: number;
     totalVentesHier: number;
     totalAchatsHier: number;
     totalDepensesHier: number;
-    topProduits: { nom: string; quantite: number; total: number }[];
+    topProduits: { nom: string; quantite: number; total: number; benefice: number }[];
+    previsionnel: {
+      totalDepensesFixesMois: number;
+      provisionnementJournalier: number;
+      daysLeft: number;
+      daysInMonth: number;
+      dayOfMonth: number;
+    };
+    alertesStock: { id: number; nom: string; stock: number; categorie: string }[];
   }>;
 
   getBeneficeEvolution(userId: number): Promise<{
@@ -275,13 +284,14 @@ export class DatabaseStorage implements IStorage {
           nom: produits.nom,
           quantite: sql<number>`sum(${venteItems.quantite})`,
           total: sql<number>`sum(${venteItems.quantite} * ${venteItems.prixUnitaire})`,
+          benefice: sql<number>`sum(${venteItems.quantite} * (${venteItems.prixUnitaire}::numeric - coalesce(${produits.prixAchat}::numeric, 0)))`,
         })
         .from(venteItems)
         .innerJoin(produits, eq(venteItems.produitId, produits.id))
         .innerJoin(ventes, eq(venteItems.venteId, ventes.id))
         .where(and(eq(ventes.userId, userId), gte(ventes.date, todayStart), lte(ventes.date, tomorrowStart)))
         .groupBy(produits.nom)
-        .orderBy(desc(sql`sum(${venteItems.quantite} * ${venteItems.prixUnitaire})`))
+        .orderBy(desc(sql`sum(${venteItems.quantite} * (${venteItems.prixUnitaire}::numeric - coalesce(${produits.prixAchat}::numeric, 0)))`))
         .limit(5),
       // Dépenses fixes du mois (loyer, électricité, eau, salaires)
       db.select({ montant: depenses.montant })
@@ -327,7 +337,7 @@ export class DatabaseStorage implements IStorage {
       totalVentesHier,
       totalAchatsHier,
       totalDepensesHier,
-      topProduits: topProduitsRaw.map((p) => ({ nom: p.nom, quantite: Number(p.quantite), total: Number(p.total) })),
+      topProduits: topProduitsRaw.map((p) => ({ nom: p.nom, quantite: Number(p.quantite), total: Number(p.total), benefice: Number(p.benefice) })),
       previsionnel: {
         totalDepensesFixesMois,
         provisionnementJournalier,
