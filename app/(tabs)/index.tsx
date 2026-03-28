@@ -134,6 +134,55 @@ function BeneficeBarChart({ data }: { data: BeneficePoint[] }) {
   );
 }
 
+// ── COMPOSANT : GRAPHIQUE BARRES CHIFFRE D'AFFAIRES ──
+function ChiffreAffaireBarChart({ data }: { data: BeneficePoint[] }) {
+  const BAR_W = 40;
+  const BAR_GAP = 10;
+  const PAD_LEFT = 4;
+  const TOP_PAD = 22;
+  const BAR_AREA_H = 110;
+  const BOTTOM_PAD = 30;
+  const SVG_H = TOP_PAD + BAR_AREA_H + BOTTOM_PAD;
+  const chartW = data.length * (BAR_W + BAR_GAP) + PAD_LEFT;
+
+  const maxVal = Math.max(...data.map((d) => d.ventes), 1);
+
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
+      <Svg width={chartW} height={SVG_H}>
+        {data.map((point, i) => {
+          const x = PAD_LEFT + i * (BAR_W + BAR_GAP);
+          const barH = Math.max((point.ventes / maxVal) * BAR_AREA_H, 2);
+          const barY = TOP_PAD + BAR_AREA_H - barH;
+
+          return (
+            <G key={i}>
+              <Rect
+                x={x} y={barY} width={BAR_W} height={barH}
+                rx={5} fill={Colors.primary} opacity={0.82}
+              />
+              <SvgText
+                x={x + BAR_W / 2} y={Math.max(barY - 4, TOP_PAD - 2)}
+                textAnchor="middle" fontSize={8}
+                fill={Colors.primary} fontFamily="Inter_600SemiBold"
+              >
+                {fmtShort(point.ventes)}
+              </SvgText>
+              <SvgText
+                x={x + BAR_W / 2} y={TOP_PAD + BAR_AREA_H + BOTTOM_PAD - 8}
+                textAnchor="middle" fontSize={9}
+                fill={Colors.textMuted} fontFamily="Inter_500Medium"
+              >
+                {point.label}
+              </SvgText>
+            </G>
+          );
+        })}
+      </Svg>
+    </ScrollView>
+  );
+}
+
 // ── COMPOSANT : GRAPHIQUE BARRES HORIZONTAL ──
 function ComparisonChart({
   labelA,
@@ -365,6 +414,19 @@ export default function DashboardScreen() {
               </View>
             </View>
           </View>
+
+          {/* ── CARTE CA : 6 DERNIERS JOURS ── */}
+          {evolution && (
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <View style={styles.cardTitleRow}>
+                  <Ionicons name="bar-chart" size={18} color={Colors.primary} />
+                  <Text style={styles.cardTitle}>CA — 6 derniers jours</Text>
+                </View>
+              </View>
+              <ChiffreAffaireBarChart data={evolution.derniers7jours.slice(-6)} />
+            </View>
+          )}
 
           {/* ── CARTE BÉNÉFICE NET RÉEL ── */}
           <View style={styles.card}>
