@@ -407,7 +407,7 @@ export class DatabaseStorage implements IStorage {
       const c = parseFloat(cRow?.cogs ?? "0");
       const d = parseFloat(dRow?.total ?? "0");
       const a = parseFloat(aRow?.total ?? "0");
-      return { label: `${JOURS_FR[day.getDay()]} ${day.getDate()}`, ventes: v, achats: a, cogs: c, depenses: d, benefice: v - c - d };
+      return { label: `${JOURS_FR[day.getDay()]} ${day.getDate()}`, ventes: v, achats: a, cogs: c, depenses: d, benefice: v - a - d };
     });
 
     // ── 12 derniers mois ──
@@ -462,7 +462,7 @@ export class DatabaseStorage implements IStorage {
       const d = parseFloat(dRow?.total ?? "0");
       const a = parseFloat(aRow?.total ?? "0");
       const yearSuffix = month.getFullYear() !== now.getFullYear() ? ` '${String(month.getFullYear()).slice(2)}` : "";
-      return { label: `${MOIS_FR[month.getMonth()]}${yearSuffix}`, ventes: v, achats: a, cogs: c, depenses: d, benefice: v - c - d };
+      return { label: `${MOIS_FR[month.getMonth()]}${yearSuffix}`, ventes: v, achats: a, cogs: c, depenses: d, benefice: v - a - d };
     });
 
     return { derniers7jours, derniers12mois };
