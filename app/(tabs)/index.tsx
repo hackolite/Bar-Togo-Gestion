@@ -35,10 +35,12 @@ function pct(a: number, b: number): number {
 
 interface DashStats {
   ventesAujourdhui: number;
+  achatsAujourdhui: number;
   depensesAujourdhui: number;
   coutsVentesAujourdhui: number;
   beneficeNetAujourdhui: number;
   totalVentesHier: number;
+  totalAchatsHier: number;
   totalDepensesHier: number;
   topProduits: { nom: string; quantite: number; total: number }[];
   previsionnel: {
@@ -54,6 +56,7 @@ interface DashStats {
 interface BeneficePoint {
   label: string;
   ventes: number;
+  achats: number;
   cogs: number;
   depenses: number;
   benefice: number;
@@ -145,28 +148,44 @@ function ChiffreAffaireBarChart({ data }: { data: BeneficePoint[] }) {
   const SVG_H = TOP_PAD + BAR_AREA_H + BOTTOM_PAD;
   const chartW = data.length * (BAR_W + BAR_GAP) + PAD_LEFT;
 
-  const maxVal = Math.max(...data.map((d) => d.ventes), 1);
+  const caValues = data.map((d) => d.ventes - d.achats);
+  const maxCA = Math.max(...caValues, 0);
+  const minCA = Math.min(...caValues, 0);
+  const range = Math.max(maxCA - minCA, 1);
+  const zeroY = TOP_PAD + (maxCA / range) * BAR_AREA_H;
 
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
       <Svg width={chartW} height={SVG_H}>
+        {/* Zero line */}
+        <Line
+          x1={0} y1={zeroY} x2={chartW} y2={zeroY}
+          stroke={Colors.border} strokeWidth={1.2}
+          strokeDasharray="4 3"
+        />
         {data.map((point, i) => {
+          const ca = point.ventes - point.achats;
+          const isPositive = ca >= 0;
+          const color = isPositive ? Colors.primary : Colors.danger;
           const x = PAD_LEFT + i * (BAR_W + BAR_GAP);
-          const barH = Math.max((point.ventes / maxVal) * BAR_AREA_H, 2);
-          const barY = TOP_PAD + BAR_AREA_H - barH;
+          const barH = Math.max(Math.abs(ca) / range * BAR_AREA_H, 2);
+          const barY = isPositive ? zeroY - barH : zeroY;
+          const valueLabelY = isPositive
+            ? Math.max(barY - 4, TOP_PAD - 2)
+            : barY + barH + 10;
 
           return (
             <G key={i}>
               <Rect
                 x={x} y={barY} width={BAR_W} height={barH}
-                rx={5} fill={Colors.primary} opacity={0.82}
+                rx={5} fill={color} opacity={0.82}
               />
               <SvgText
-                x={x + BAR_W / 2} y={Math.max(barY - 4, TOP_PAD - 2)}
+                x={x + BAR_W / 2} y={valueLabelY}
                 textAnchor="middle" fontSize={8}
-                fill={Colors.primary} fontFamily="Inter_600SemiBold"
+                fill={color} fontFamily="Inter_600SemiBold"
               >
-                {fmtShort(point.ventes)}
+                {fmtShort(ca)}
               </SvgText>
               <SvgText
                 x={x + BAR_W / 2} y={TOP_PAD + BAR_AREA_H + BOTTOM_PAD - 8}
@@ -347,7 +366,9 @@ export default function DashboardScreen() {
   });
 
   const topInsets = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
-  const evol = pct(stats?.ventesAujourdhui ?? 0, stats?.totalVentesHier ?? 0);
+  const caAujourdhui = (stats?.ventesAujourdhui ?? 0) - (stats?.achatsAujourdhui ?? 0);
+  const caHier = (stats?.totalVentesHier ?? 0) - (stats?.totalAchatsHier ?? 0);
+  const evol = pct(caAujourdhui, caHier);
   const isPositive = evol >= 0;
 
   const prev = stats?.previsionnel;
@@ -399,16 +420,16 @@ export default function DashboardScreen() {
                 </Text>
               </View>
             </View>
-            <Text style={styles.mainValue}>{formatFCFAFull(stats?.ventesAujourdhui ?? 0)}</Text>
+            <Text style={[styles.mainValue, { color: caAujourdhui >= 0 ? Colors.text : Colors.danger }]}>{formatFCFAFull(caAujourdhui)}</Text>
             <View style={styles.chartWrap}>
               <View style={{ width: "100%" }}>
                 <ComparisonChart
                   labelA="Aujourd'hui"
-                  valueA={stats?.ventesAujourdhui ?? 0}
+                  valueA={Math.abs(caAujourdhui)}
                   labelB="Hier"
-                  valueB={stats?.totalVentesHier ?? 0}
-                  colorA={Colors.success}
-                  colorB={Colors.success + "55"}
+                  valueB={Math.abs(caHier)}
+                  colorA={caAujourdhui >= 0 ? Colors.success : Colors.danger}
+                  colorB={caHier >= 0 ? Colors.success + "55" : Colors.danger + "55"}
                   width={320}
                 />
               </View>
@@ -425,6 +446,10 @@ export default function DashboardScreen() {
                 </View>
               </View>
               <ChiffreAffaireBarChart data={evolution.derniers7jours.slice(-6)} />
+              <View style={styles.legendRow}>
+                <LegendDot color={Colors.primary} label="Positif (ventes > achats)" />
+                <LegendDot color={Colors.danger} label="Négatif (achats > ventes)" />
+              </View>
             </View>
           )}
 
