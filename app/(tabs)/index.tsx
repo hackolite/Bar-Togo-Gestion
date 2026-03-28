@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -300,6 +300,8 @@ export default function DashboardScreen() {
     },
   });
 
+  const [alertesStockVisible, setAlertesStockVisible] = useState(true);
+
   const topInsets = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const caAujourdhui = (stats?.ventesAujourdhui ?? 0) - (stats?.achatsAujourdhui ?? 0);
   const caHier = (stats?.totalVentesHier ?? 0) - (stats?.totalAchatsHier ?? 0);
@@ -499,38 +501,47 @@ export default function DashboardScreen() {
           {/* ── ALERTES STOCK ── */}
           {stats?.alertesStock && stats.alertesStock.length > 0 && (
             <View style={styles.card}>
-              <View style={styles.cardHeader}>
+              <Pressable style={styles.cardHeader} onPress={() => setAlertesStockVisible((v) => !v)}>
                 <View style={styles.cardTitleRow}>
                   <Ionicons name="warning" size={18} color={Colors.danger} />
                   <Text style={styles.cardTitle}>Alertes stock</Text>
                 </View>
-                <View style={[styles.evolBadge, { backgroundColor: Colors.danger + "20" }]}>
-                  <Text style={[styles.evolText, { color: Colors.danger }]}>{stats.alertesStock.length} produit(s)</Text>
-                </View>
-              </View>
-              <View style={styles.alertesList}>
-                {stats.alertesStock.map((p, i) => (
-                  <View key={p.id} style={[styles.alerteItem, i < stats.alertesStock.length - 1 && styles.alerteItemBorder]}>
-                    <View style={[styles.alerteStockBadge, { backgroundColor: p.stock === 0 ? Colors.danger : Colors.warning + "30" }]}>
-                      <Text style={[styles.alerteStockNum, { color: p.stock === 0 ? "#fff" : Colors.danger }]}>{p.stock}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.alerteNom} numberOfLines={1}>{p.nom}</Text>
-                      <Text style={styles.alerteCat}>{p.categorie}</Text>
-                    </View>
-                    {p.stock === 0 ? (
-                      <View style={[styles.ruptureBadge]}>
-                        <Text style={styles.ruptureText}>RUPTURE</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.stockBas}>
-                        <Ionicons name="alert-circle" size={14} color={Colors.warning} />
-                        <Text style={styles.stockBasText}>Stock bas</Text>
-                      </View>
-                    )}
+                <View style={styles.alertesBadgeRow}>
+                  <View style={[styles.evolBadge, { backgroundColor: Colors.danger + "20" }]}>
+                    <Text style={[styles.evolText, { color: Colors.danger }]}>{stats.alertesStock.length} produit(s)</Text>
                   </View>
-                ))}
-              </View>
+                  <Ionicons
+                    name={alertesStockVisible ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color={Colors.textMuted}
+                  />
+                </View>
+              </Pressable>
+              {alertesStockVisible && (
+                <View style={styles.alertesList}>
+                  {stats.alertesStock.map((p, i) => (
+                    <View key={p.id} style={[styles.alerteItem, i < stats.alertesStock.length - 1 && styles.alerteItemBorder]}>
+                      <View style={[styles.alerteStockBadge, { backgroundColor: p.stock === 0 ? Colors.danger : Colors.warning + "30" }]}>
+                        <Text style={[styles.alerteStockNum, { color: p.stock === 0 ? "#fff" : Colors.danger }]}>{p.stock}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.alerteNom} numberOfLines={1}>{p.nom}</Text>
+                        <Text style={styles.alerteCat}>{p.categorie}</Text>
+                      </View>
+                      {p.stock === 0 ? (
+                        <View style={[styles.ruptureBadge]}>
+                          <Text style={styles.ruptureText}>RUPTURE</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.stockBas}>
+                          <Ionicons name="alert-circle" size={14} color={Colors.warning} />
+                          <Text style={styles.stockBasText}>Stock bas</Text>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
           )}
 
@@ -644,6 +655,7 @@ const styles = StyleSheet.create({
   alertValue: { fontSize: 18, fontFamily: "Inter_700Bold" },
 
   // Alertes stock
+  alertesBadgeRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   alertesList: {},
   alerteItem: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
   alerteItemBorder: { borderBottomWidth: 1, borderBottomColor: Colors.border },
