@@ -137,71 +137,6 @@ function BeneficeBarChart({ data }: { data: BeneficePoint[] }) {
   );
 }
 
-// ── COMPOSANT : GRAPHIQUE BARRES CHIFFRE D'AFFAIRES ──
-function ChiffreAffaireBarChart({ data }: { data: BeneficePoint[] }) {
-  const BAR_W = 40;
-  const BAR_GAP = 10;
-  const PAD_LEFT = 4;
-  const TOP_PAD = 22;
-  const BAR_AREA_H = 110;
-  const BOTTOM_PAD = 30;
-  const SVG_H = TOP_PAD + BAR_AREA_H + BOTTOM_PAD;
-  const chartW = data.length * (BAR_W + BAR_GAP) + PAD_LEFT;
-
-  const caValues = data.map((d) => d.ventes - d.achats);
-  const maxCA = Math.max(...caValues, 0);
-  const minCA = Math.min(...caValues, 0);
-  const range = Math.max(maxCA - minCA, 1);
-  const zeroY = TOP_PAD + (maxCA / range) * BAR_AREA_H;
-
-  return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
-      <Svg width={chartW} height={SVG_H}>
-        {/* Zero line */}
-        <Line
-          x1={0} y1={zeroY} x2={chartW} y2={zeroY}
-          stroke={Colors.border} strokeWidth={1.2}
-          strokeDasharray="4 3"
-        />
-        {data.map((point, i) => {
-          const ca = point.ventes - point.achats;
-          const isPositive = ca >= 0;
-          const color = isPositive ? Colors.primary : Colors.danger;
-          const x = PAD_LEFT + i * (BAR_W + BAR_GAP);
-          const barH = Math.max(Math.abs(ca) / range * BAR_AREA_H, 2);
-          const barY = isPositive ? zeroY - barH : zeroY;
-          const valueLabelY = isPositive
-            ? Math.max(barY - 4, TOP_PAD - 2)
-            : barY + barH + 10;
-
-          return (
-            <G key={i}>
-              <Rect
-                x={x} y={barY} width={BAR_W} height={barH}
-                rx={5} fill={color} opacity={0.82}
-              />
-              <SvgText
-                x={x + BAR_W / 2} y={valueLabelY}
-                textAnchor="middle" fontSize={8}
-                fill={color} fontFamily="Inter_600SemiBold"
-              >
-                {fmtShort(ca)}
-              </SvgText>
-              <SvgText
-                x={x + BAR_W / 2} y={TOP_PAD + BAR_AREA_H + BOTTOM_PAD - 8}
-                textAnchor="middle" fontSize={9}
-                fill={Colors.textMuted} fontFamily="Inter_500Medium"
-              >
-                {point.label}
-              </SvgText>
-            </G>
-          );
-        })}
-      </Svg>
-    </ScrollView>
-  );
-}
-
 // ── COMPOSANT : GRAPHIQUE BARRES HORIZONTAL ──
 function ComparisonChart({
   labelA,
@@ -436,19 +371,36 @@ export default function DashboardScreen() {
             </View>
           </View>
 
-          {/* ── CARTE CA : 6 DERNIERS JOURS ── */}
+          {/* ── ÉVOLUTION DU BÉNÉFICE : 7 DERNIERS JOURS ── */}
           {evolution && (
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleRow}>
                   <Ionicons name="bar-chart" size={18} color={Colors.primary} />
-                  <Text style={styles.cardTitle}>CA — 6 derniers jours</Text>
+                  <Text style={styles.cardTitle}>Bénéfice — 7 derniers jours</Text>
                 </View>
               </View>
-              <ChiffreAffaireBarChart data={evolution.derniers7jours.slice(-6)} />
+              <BeneficeBarChart data={evolution.derniers7jours} />
               <View style={styles.legendRow}>
-                <LegendDot color={Colors.primary} label="Positif (ventes > achats)" />
-                <LegendDot color={Colors.danger} label="Négatif (achats > ventes)" />
+                <LegendDot color={Colors.success} label="Positif" />
+                <LegendDot color={Colors.danger} label="Négatif" />
+              </View>
+            </View>
+          )}
+
+          {/* ── ÉVOLUTION DU BÉNÉFICE : 12 DERNIERS MOIS ── */}
+          {evolution && (
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <View style={styles.cardTitleRow}>
+                  <Ionicons name="bar-chart" size={18} color={Colors.accent} />
+                  <Text style={styles.cardTitle}>Bénéfice — 12 derniers mois</Text>
+                </View>
+              </View>
+              <BeneficeBarChart data={evolution.derniers12mois} />
+              <View style={styles.legendRow}>
+                <LegendDot color={Colors.success} label="Positif" />
+                <LegendDot color={Colors.danger} label="Négatif" />
               </View>
             </View>
           )}
@@ -614,39 +566,6 @@ export default function DashboardScreen() {
             </View>
           )}
 
-          {/* ── ÉVOLUTION DU BÉNÉFICE : 7 DERNIERS JOURS ── */}
-          {evolution && (
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={styles.cardTitleRow}>
-                  <Ionicons name="bar-chart" size={18} color={Colors.primary} />
-                  <Text style={styles.cardTitle}>Bénéfice — 7 derniers jours</Text>
-                </View>
-              </View>
-              <BeneficeBarChart data={evolution.derniers7jours} />
-              <View style={styles.legendRow}>
-                <LegendDot color={Colors.success} label="Positif" />
-                <LegendDot color={Colors.danger} label="Négatif" />
-              </View>
-            </View>
-          )}
-
-          {/* ── ÉVOLUTION DU BÉNÉFICE : 12 DERNIERS MOIS ── */}
-          {evolution && (
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={styles.cardTitleRow}>
-                  <Ionicons name="bar-chart" size={18} color={Colors.accent} />
-                  <Text style={styles.cardTitle}>Bénéfice — 12 derniers mois</Text>
-                </View>
-              </View>
-              <BeneficeBarChart data={evolution.derniers12mois} />
-              <View style={styles.legendRow}>
-                <LegendDot color={Colors.success} label="Positif" />
-                <LegendDot color={Colors.danger} label="Négatif" />
-              </View>
-            </View>
-          )}
         </>
       )}
     </ScrollView>

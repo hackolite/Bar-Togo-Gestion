@@ -94,6 +94,7 @@ function DepenseModal({
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/depenses"] });
       qc.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      qc.invalidateQueries({ queryKey: ["/api/benefice-evolution"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onClose();
     },
@@ -239,6 +240,7 @@ export default function DepensesScreen() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/depenses"] });
       qc.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      qc.invalidateQueries({ queryKey: ["/api/benefice-evolution"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
   });
