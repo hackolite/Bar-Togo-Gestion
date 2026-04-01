@@ -394,7 +394,7 @@ export default function DashboardScreen() {
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleRow}>
                   <Ionicons name="bar-chart" size={18} color={Colors.primary} />
-                  <Text style={styles.cardTitle}>Évolution</Text>
+                  <Text style={styles.cardTitle}>Indicateurs financiers</Text>
                 </View>
               </View>
               {/* Period selector */}

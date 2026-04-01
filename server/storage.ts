@@ -166,6 +166,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteVente(id: number, userId: number): Promise<void> {
+    const [vente] = await db.select().from(ventes).where(and(eq(ventes.id, id), eq(ventes.userId, userId)));
+    if (!vente) throw new Error("Vente non trouvée");
     const items = await db.select().from(venteItems).where(eq(venteItems.venteId, id));
     for (const item of items) {
       await db
@@ -173,7 +175,7 @@ export class DatabaseStorage implements IStorage {
         .set({ stock: sql`${produits.stock} + ${item.quantite}` })
         .where(eq(produits.id, item.produitId));
     }
-    await db.delete(ventes).where(and(eq(ventes.id, id), eq(ventes.userId, userId)));
+    await db.delete(ventes).where(eq(ventes.id, id));
   }
 
   async getDepenses(userId: number): Promise<Depense[]> {
