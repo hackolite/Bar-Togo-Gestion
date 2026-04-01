@@ -748,6 +748,7 @@ const ica = StyleSheet.create({
 
 export default function AchatsScreen() {
   const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
   const [modalVisible, setModalVisible] = useState(false);
   const [csvModalVisible, setCsvModalVisible] = useState(false);
   const [search, setSearch] = useState("");
@@ -767,6 +768,30 @@ export default function AchatsScreen() {
       return res.json();
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/achats/${id}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/achats"] });
+      qc.invalidateQueries({ queryKey: ["/api/produits"] });
+      qc.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      qc.invalidateQueries({ queryKey: ["/api/benefice-evolution"] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+  });
+
+  const confirmDelete = (a: AchatFournisseur) => {
+    Alert.alert(
+      "Supprimer l'achat",
+      `Voulez-vous supprimer cet achat de ${formatFCFA(Number(a.prixUnitaire) * a.quantite)} ?`,
+      [
+        { text: "Annuler", style: "cancel" },
+        { text: "Supprimer", style: "destructive", onPress: () => deleteMutation.mutate(a.id) },
+      ]
+    );
+  };
 
   const totalJour = React.useMemo(() => {
     const today = new Date().toDateString();
@@ -807,6 +832,13 @@ export default function AchatsScreen() {
             ) : null}
           </View>
           <Text style={styles.achatTotal}>{formatFCFA(total)}</Text>
+          <Pressable
+            onPress={() => confirmDelete(item)}
+            hitSlop={8}
+            style={{ marginLeft: 8, padding: 4 }}
+          >
+            <Ionicons name="trash-outline" size={18} color={Colors.danger} />
+          </Pressable>
         </View>
         <View style={styles.achatDivider} />
         <View style={styles.achatBody}>

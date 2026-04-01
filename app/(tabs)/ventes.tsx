@@ -660,6 +660,7 @@ const icv = StyleSheet.create({
 
 export default function VentesScreen() {
   const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
   const [modalVisible, setModalVisible] = useState(false);
   const [csvModalVisible, setCsvModalVisible] = useState(false);
 
@@ -678,6 +679,30 @@ export default function VentesScreen() {
       return res.json();
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/ventes/${id}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/ventes"] });
+      qc.invalidateQueries({ queryKey: ["/api/produits"] });
+      qc.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      qc.invalidateQueries({ queryKey: ["/api/benefice-evolution"] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+  });
+
+  const confirmDelete = (v: VenteRecord) => {
+    Alert.alert(
+      "Supprimer la vente",
+      `Voulez-vous supprimer cette vente de ${formatFCFA(v.total)} ?`,
+      [
+        { text: "Annuler", style: "cancel" },
+        { text: "Supprimer", style: "destructive", onPress: () => deleteMutation.mutate(v.id) },
+      ]
+    );
+  };
 
   const totalJour = ventes
     .filter((v) => {
@@ -700,6 +725,13 @@ export default function VentesScreen() {
           {item.note ? <Text style={vs.venteNote}>{item.note}</Text> : null}
         </View>
         <Text style={vs.venteTotal}>{formatFCFA(item.total)}</Text>
+        <Pressable
+          onPress={() => confirmDelete(item)}
+          hitSlop={8}
+          style={{ marginLeft: 8, padding: 4 }}
+        >
+          <Ionicons name="trash-outline" size={18} color={Colors.danger} />
+        </Pressable>
       </View>
       <View style={vs.venteDivider} />
       <View style={vs.venteItems}>

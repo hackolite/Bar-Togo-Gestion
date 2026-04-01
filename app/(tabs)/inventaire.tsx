@@ -738,6 +738,13 @@ export default function InventaireScreen() {
             </View>
           </View>
         </Pressable>
+        <Pressable
+          onPress={() => confirmDelete(item)}
+          hitSlop={8}
+          style={{ padding: 8, alignSelf: "center" }}
+        >
+          <Ionicons name="trash-outline" size={18} color={Colors.danger} />
+        </Pressable>
       </View>
     );
   };
