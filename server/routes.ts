@@ -370,6 +370,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/ventes/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteVente(parseInt(req.params.id), req.session.userId!);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
   // ── DÉPENSES ──
   app.get("/api/depenses", requireAuth, async (req, res) => {
     try {

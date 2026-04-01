@@ -39,6 +39,7 @@ export interface IStorage {
     note: string | undefined,
     items: { produitId: number; quantite: number; prixUnitaire: number }[]
   ): Promise<Vente>;
+  deleteVente(id: number, userId: number): Promise<void>;
 
   getDepenses(userId: number): Promise<Depense[]>;
   createDepense(depense: InsertDepense & { userId: number }): Promise<Depense>;
@@ -77,7 +78,7 @@ export interface IStorage {
 
   getBeneficeEvolution(userId: number): Promise<{
     derniers7jours: { label: string; ventes: number; achats: number; cogs: number; depenses: number; benefice: number }[];
-    derniers12mois: { label: string; ventes: number; achats: number; cogs: number; depenses: number; benefice: number }[];
+    derniers6mois: { label: string; ventes: number; achats: number; cogs: number; depenses: number; benefice: number }[];
   }>;
 
 }
@@ -162,6 +163,17 @@ export class DatabaseStorage implements IStorage {
         .where(eq(produits.id, item.produitId));
     }
     return v;
+  }
+
+  async deleteVente(id: number, userId: number): Promise<void> {
+    const items = await db.select().from(venteItems).where(eq(venteItems.venteId, id));
+    for (const item of items) {
+      await db
+        .update(produits)
+        .set({ stock: sql`${produits.stock} + ${item.quantite}` })
+        .where(eq(produits.id, item.produitId));
+    }
+    await db.delete(ventes).where(and(eq(ventes.id, id), eq(ventes.userId, userId)));
   }
 
   async getDepenses(userId: number): Promise<Depense[]> {
@@ -353,7 +365,7 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
     const tomorrowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
     const sevenDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
-    const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
     const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
     // ── 7 derniers jours ──
@@ -410,14 +422,14 @@ export class DatabaseStorage implements IStorage {
       return { label: `${JOURS_FR[day.getDay()]} ${day.getDate()}`, ventes: v, achats: a, cogs: c, depenses: d, benefice: v - a - d };
     });
 
-    // ── 12 derniers mois ──
+    // ── 6 derniers mois ──
     const [ventesM, cogsM, depensesM, achatsM] = await Promise.all([
       db.select({
         mois: sql<string>`to_char(date_trunc('month', ${ventes.date}), 'YYYY-MM')`,
         total: sql<string>`coalesce(sum(${ventes.total}::numeric), 0)`,
       })
         .from(ventes)
-        .where(and(eq(ventes.userId, userId), gte(ventes.date, twelveMonthsAgo), lt(ventes.date, nextMonthStart)))
+        .where(and(eq(ventes.userId, userId), gte(ventes.date, sixMonthsAgo), lt(ventes.date, nextMonthStart)))
         .groupBy(sql`date_trunc('month', ${ventes.date})`)
         .orderBy(sql`date_trunc('month', ${ventes.date})`),
       db.select({
@@ -427,7 +439,7 @@ export class DatabaseStorage implements IStorage {
         .from(venteItems)
         .innerJoin(produits, eq(venteItems.produitId, produits.id))
         .innerJoin(ventes, eq(venteItems.venteId, ventes.id))
-        .where(and(eq(ventes.userId, userId), gte(ventes.date, twelveMonthsAgo), lt(ventes.date, nextMonthStart)))
+        .where(and(eq(ventes.userId, userId), gte(ventes.date, sixMonthsAgo), lt(ventes.date, nextMonthStart)))
         .groupBy(sql`date_trunc('month', ${ventes.date})`)
         .orderBy(sql`date_trunc('month', ${ventes.date})`),
       db.select({
@@ -435,7 +447,7 @@ export class DatabaseStorage implements IStorage {
         total: sql<string>`coalesce(sum(${depenses.montant}::numeric), 0)`,
       })
         .from(depenses)
-        .where(and(eq(depenses.userId, userId), gte(depenses.date, twelveMonthsAgo), lt(depenses.date, nextMonthStart)))
+        .where(and(eq(depenses.userId, userId), gte(depenses.date, sixMonthsAgo), lt(depenses.date, nextMonthStart)))
         .groupBy(sql`date_trunc('month', ${depenses.date})`)
         .orderBy(sql`date_trunc('month', ${depenses.date})`),
       // Achats fournisseurs par mois
@@ -444,14 +456,14 @@ export class DatabaseStorage implements IStorage {
         total: sql<string>`coalesce(sum(${achatsFournisseurs.quantite} * ${achatsFournisseurs.prixUnitaire}::numeric), 0)`,
       })
         .from(achatsFournisseurs)
-        .where(and(eq(achatsFournisseurs.userId, userId), gte(achatsFournisseurs.date, twelveMonthsAgo), lt(achatsFournisseurs.date, nextMonthStart)))
+        .where(and(eq(achatsFournisseurs.userId, userId), gte(achatsFournisseurs.date, sixMonthsAgo), lt(achatsFournisseurs.date, nextMonthStart)))
         .groupBy(sql`date_trunc('month', ${achatsFournisseurs.date})`)
         .orderBy(sql`date_trunc('month', ${achatsFournisseurs.date})`),
     ]);
 
     const MOIS_FR = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
-    const derniers12mois = Array.from({ length: 12 }, (_, i) => {
-      const month = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1);
+    const derniers6mois = Array.from({ length: 6 }, (_, i) => {
+      const month = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
       const key = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
       const vRow = ventesM.find((r) => r.mois === key);
       const cRow = cogsM.find((r) => r.mois === key);
@@ -465,7 +477,7 @@ export class DatabaseStorage implements IStorage {
       return { label: `${MOIS_FR[month.getMonth()]}${yearSuffix}`, ventes: v, achats: a, cogs: c, depenses: d, benefice: v - a - d };
     });
 
-    return { derniers7jours, derniers12mois };
+    return { derniers7jours, derniers6mois };
   }
 
 }

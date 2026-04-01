@@ -64,8 +64,11 @@ interface BeneficePoint {
 
 interface BeneficeEvolution {
   derniers7jours: BeneficePoint[];
-  derniers12mois: BeneficePoint[];
+  derniers6mois: BeneficePoint[];
 }
+
+type ChartPeriod = "7j" | "6m";
+type ChartMetric = "ca" | "marge" | "achats";
 
 // ── COMPOSANT : GRAPHIQUE BARRES BÉNÉFICE ──
 function fmtShort(v: number): string {
@@ -75,7 +78,13 @@ function fmtShort(v: number): string {
   return Math.round(v).toString();
 }
 
-function BeneficeBarChart({ data }: { data: BeneficePoint[] }) {
+function getMetricValue(point: BeneficePoint, metric: ChartMetric): number {
+  if (metric === "ca") return point.ventes;
+  if (metric === "marge") return point.ventes - point.cogs;
+  return point.achats;
+}
+
+function BeneficeBarChart({ data, metric }: { data: BeneficePoint[]; metric: ChartMetric }) {
   const BAR_W = 34;
   const BAR_GAP = 8;
   const PAD_LEFT = 4;
@@ -85,10 +94,13 @@ function BeneficeBarChart({ data }: { data: BeneficePoint[] }) {
   const SVG_H = TOP_PAD + BAR_AREA_H + BOTTOM_PAD;
   const chartW = data.length * (BAR_W + BAR_GAP) + PAD_LEFT;
 
-  const maxBenef = Math.max(...data.map((d) => d.benefice), 0);
-  const minBenef = Math.min(...data.map((d) => d.benefice), 0);
-  const range = Math.max(maxBenef - minBenef, 1);
-  const zeroY = TOP_PAD + (maxBenef / range) * BAR_AREA_H;
+  const values = data.map((d) => getMetricValue(d, metric));
+  const maxVal = Math.max(...values, 0);
+  const minVal = Math.min(...values, 0);
+  const range = Math.max(maxVal - minVal, 1);
+  const zeroY = TOP_PAD + (maxVal / range) * BAR_AREA_H;
+
+  const barColor = metric === "ca" ? Colors.primary : metric === "achats" ? Colors.accent : undefined;
 
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
@@ -100,10 +112,11 @@ function BeneficeBarChart({ data }: { data: BeneficePoint[] }) {
           strokeDasharray="4 3"
         />
         {data.map((point, i) => {
-          const isPositive = point.benefice >= 0;
-          const color = isPositive ? Colors.success : Colors.danger;
+          const val = getMetricValue(point, metric);
+          const isPositive = val >= 0;
+          const color = barColor ?? (isPositive ? Colors.success : Colors.danger);
           const x = PAD_LEFT + i * (BAR_W + BAR_GAP);
-          const barH = Math.max(Math.abs(point.benefice) / range * BAR_AREA_H, 2);
+          const barH = Math.max(Math.abs(val) / range * BAR_AREA_H, 2);
           const barY = isPositive ? zeroY - barH : zeroY;
           const valueLabelY = isPositive
             ? Math.max(barY - 4, TOP_PAD - 2)
@@ -120,7 +133,7 @@ function BeneficeBarChart({ data }: { data: BeneficePoint[] }) {
                 textAnchor="middle" fontSize={8}
                 fill={color} fontFamily="Inter_600SemiBold"
               >
-                {fmtShort(point.benefice)}
+                {fmtShort(val)}
               </SvgText>
               <SvgText
                 x={x + BAR_W / 2} y={TOP_PAD + BAR_AREA_H + BOTTOM_PAD - 8}
@@ -301,6 +314,8 @@ export default function DashboardScreen() {
   });
 
   const [alertesStockVisible, setAlertesStockVisible] = useState(true);
+  const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("7j");
+  const [chartMetric, setChartMetric] = useState<ChartMetric>("marge");
 
   const topInsets = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const caAujourdhui = (stats?.ventesAujourdhui ?? 0) - (stats?.achatsAujourdhui ?? 0);
@@ -373,37 +388,61 @@ export default function DashboardScreen() {
             </View>
           </View>
 
-          {/* ── ÉVOLUTION DU BÉNÉFICE : 7 DERNIERS JOURS ── */}
+          {/* ── GRAPHIQUE ÉVOLUTION ── */}
           {evolution && (
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleRow}>
                   <Ionicons name="bar-chart" size={18} color={Colors.primary} />
-                  <Text style={styles.cardTitle}>Bénéfice — 7 derniers jours</Text>
+                  <Text style={styles.cardTitle}>Évolution</Text>
                 </View>
               </View>
-              <BeneficeBarChart data={evolution.derniers7jours} />
-              <View style={styles.legendRow}>
-                <LegendDot color={Colors.success} label="Positif" />
-                <LegendDot color={Colors.danger} label="Négatif" />
+              {/* Period selector */}
+              <View style={chartSel.row}>
+                <Pressable
+                  style={[chartSel.btn, chartPeriod === "7j" && chartSel.btnActive]}
+                  onPress={() => setChartPeriod("7j")}
+                >
+                  <Text style={[chartSel.btnText, chartPeriod === "7j" && chartSel.btnTextActive]}>7 jours</Text>
+                </Pressable>
+                <Pressable
+                  style={[chartSel.btn, chartPeriod === "6m" && chartSel.btnActive]}
+                  onPress={() => setChartPeriod("6m")}
+                >
+                  <Text style={[chartSel.btnText, chartPeriod === "6m" && chartSel.btnTextActive]}>6 mois</Text>
+                </Pressable>
               </View>
-            </View>
-          )}
-
-          {/* ── ÉVOLUTION DU BÉNÉFICE : 12 DERNIERS MOIS ── */}
-          {evolution && (
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={styles.cardTitleRow}>
-                  <Ionicons name="bar-chart" size={18} color={Colors.accent} />
-                  <Text style={styles.cardTitle}>Bénéfice — 12 derniers mois</Text>
+              {/* Metric selector */}
+              <View style={[chartSel.row, { marginTop: 6 }]}>
+                <Pressable
+                  style={[chartSel.btn, chartMetric === "ca" && chartSel.btnActive]}
+                  onPress={() => setChartMetric("ca")}
+                >
+                  <Text style={[chartSel.btnText, chartMetric === "ca" && chartSel.btnTextActive]}>CA</Text>
+                </Pressable>
+                <Pressable
+                  style={[chartSel.btn, chartMetric === "marge" && chartSel.btnActive]}
+                  onPress={() => setChartMetric("marge")}
+                >
+                  <Text style={[chartSel.btnText, chartMetric === "marge" && chartSel.btnTextActive]}>Marge</Text>
+                </Pressable>
+                <Pressable
+                  style={[chartSel.btn, chartMetric === "achats" && chartSel.btnActive]}
+                  onPress={() => setChartMetric("achats")}
+                >
+                  <Text style={[chartSel.btnText, chartMetric === "achats" && chartSel.btnTextActive]}>Achats</Text>
+                </Pressable>
+              </View>
+              <BeneficeBarChart
+                data={chartPeriod === "7j" ? evolution.derniers7jours : evolution.derniers6mois}
+                metric={chartMetric}
+              />
+              {chartMetric === "marge" && (
+                <View style={styles.legendRow}>
+                  <LegendDot color={Colors.success} label="Positif" />
+                  <LegendDot color={Colors.danger} label="Négatif" />
                 </View>
-              </View>
-              <BeneficeBarChart data={evolution.derniers12mois} />
-              <View style={styles.legendRow}>
-                <LegendDot color={Colors.success} label="Positif" />
-                <LegendDot color={Colors.danger} label="Négatif" />
-              </View>
+              )}
             </View>
           )}
 
@@ -684,4 +723,12 @@ const styles = StyleSheet.create({
   emptyBox: { alignItems: "center", paddingVertical: 40, gap: 10 },
   emptyText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
   emptySubText: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted },
+});
+
+const chartSel = StyleSheet.create({
+  row: { flexDirection: "row", gap: 6, marginBottom: 4 },
+  btn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border },
+  btnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  btnText: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.textMuted },
+  btnTextActive: { color: "#fff", fontFamily: "Inter_600SemiBold" },
 });
