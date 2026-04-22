@@ -172,6 +172,9 @@ function configureExpoAndLanding(app: express.Application) {
 
   log("Serving static Expo files with dynamic manifest routing");
 
+  const webIndexPath = path.resolve(process.cwd(), "static-build", "index.html");
+  const hasWebBuild = () => fs.existsSync(webIndexPath);
+
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith("/api")) {
       return next();
@@ -187,6 +190,11 @@ function configureExpoAndLanding(app: express.Application) {
     }
 
     if (req.path === "/") {
+      // Serve the built web app for regular browsers if available
+      if (hasWebBuild()) {
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        return res.status(200).sendFile(webIndexPath);
+      }
       return serveLandingPage({
         req,
         res,
@@ -201,6 +209,15 @@ function configureExpoAndLanding(app: express.Application) {
   app.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
   app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
   app.use(express.static(path.resolve(process.cwd(), "static-build")));
+
+  // SPA fallback: for any non-API GET that doesn't match a static file, serve the web app
+  app.get(/^(?!\/api\/).*/, (req: Request, res: Response, next: NextFunction) => {
+    if (!hasWebBuild()) return next();
+    if (req.path.startsWith("/assets") || req.path.startsWith("/uploads")) return next();
+    if (path.extname(req.path)) return next();
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.status(200).sendFile(webIndexPath);
+  });
 
   log("Expo routing: Checking expo-platform header on / and /manifest");
 }
