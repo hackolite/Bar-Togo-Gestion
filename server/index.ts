@@ -161,65 +161,25 @@ function serveLandingPage({
 }
 
 function configureExpoAndLanding(app: express.Application) {
-  const templatePath = path.resolve(
-    process.cwd(),
-    "server",
-    "templates",
-    "landing-page.html",
-  );
-  const landingPageTemplate = fs.readFileSync(templatePath, "utf-8");
-  const appName = getAppName();
-
-  log("Serving static Expo files with dynamic manifest routing");
-
   const webIndexPath = path.resolve(process.cwd(), "static-build", "index.html");
   const hasWebBuild = () => fs.existsSync(webIndexPath);
 
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.path.startsWith("/api")) {
-      return next();
-    }
-
-    if (req.path !== "/" && req.path !== "/manifest") {
-      return next();
-    }
-
-    const platform = req.header("expo-platform");
-    if (platform && (platform === "ios" || platform === "android")) {
-      return serveExpoManifest(platform, res);
-    }
-
-    if (req.path === "/") {
-      // Serve the built web app for regular browsers if available
-      if (hasWebBuild()) {
-        res.setHeader("Content-Type", "text/html; charset=utf-8");
-        return res.status(200).sendFile(webIndexPath);
-      }
-      return serveLandingPage({
-        req,
-        res,
-        landingPageTemplate,
-        appName,
-      });
-    }
-
-    next();
-  });
+  log("Serving web app from static-build/");
 
   app.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
   app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
   app.use(express.static(path.resolve(process.cwd(), "static-build")));
 
-  // SPA fallback: for any non-API GET that doesn't match a static file, serve the web app
+  // Serve the web app for any non-API GET request (SPA fallback)
   app.get(/^(?!\/api\/).*/, (req: Request, res: Response, next: NextFunction) => {
-    if (!hasWebBuild()) return next();
+    if (!hasWebBuild()) {
+      return res.status(503).send("Application web non encore construite. Lancez: npm run expo:static:build");
+    }
     if (req.path.startsWith("/assets") || req.path.startsWith("/uploads")) return next();
     if (path.extname(req.path)) return next();
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     return res.status(200).sendFile(webIndexPath);
   });
-
-  log("Expo routing: Checking expo-platform header on / and /manifest");
 }
 
 function setupErrorHandler(app: express.Application) {
