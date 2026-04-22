@@ -1,20 +1,23 @@
 import { fetch } from "expo/fetch";
+import { Platform } from "react-native";
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 /**
- * Gets the base URL for the Express API server (e.g., "http://localhost:3000")
- * @returns {string} The API base URL
+ * Gets the base URL for the Express API server.
+ * On web, uses the current window's origin (same origin as the served page).
+ * On native, uses EXPO_PUBLIC_DOMAIN env var.
  */
 export function getApiUrl(): string {
-  let host = process.env.EXPO_PUBLIC_DOMAIN;
+  if (Platform.OS === "web" && typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin + "/";
+  }
 
+  const host = process.env.EXPO_PUBLIC_DOMAIN;
   if (!host) {
     throw new Error("EXPO_PUBLIC_DOMAIN is not set");
   }
 
-  let url = new URL(`https://${host}`);
-
-  return url.href;
+  return new URL(`https://${host}`).href;
 }
 
 async function throwIfResNotOk(res: Response) {
