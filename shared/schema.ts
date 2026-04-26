@@ -65,6 +65,7 @@ export const depenses = pgTable("depenses", {
   libelle: text("libelle").notNull(),
   montant: numeric("montant", { precision: 12, scale: 2 }).notNull(),
   categorie: text("categorie").notNull().default("Général"),
+  recurrence: text("recurrence").notNull().default("ponctuelle"),
   date: timestamp("date").notNull().default(sql`now()`),
   note: text("note"),
   userId: integer("user_id")

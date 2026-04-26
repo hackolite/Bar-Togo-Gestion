@@ -274,11 +274,11 @@ export class DatabaseStorage implements IStorage {
     yesterdayStart.setDate(yesterdayStart.getDate() - 1);
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const [ventesToday, depensesToday, ventesHier, depensesHier, achatsToday, achatsHier, cogsRow, topProduitsRaw, depensesFixesMois, alertesStockRaw] = await Promise.all([
+    const [ventesToday, depensesPonctuellesToday, ventesHier, depensesPonctuellesHier, achatsToday, achatsHier, cogsRow, topProduitsRaw, depensesMensuellesMois, alertesStockRaw] = await Promise.all([
       db.select({ total: ventes.total }).from(ventes).where(and(eq(ventes.userId, userId), gte(ventes.date, todayStart), lte(ventes.date, tomorrowStart))),
-      db.select({ montant: depenses.montant }).from(depenses).where(and(eq(depenses.userId, userId), gte(depenses.date, todayStart), lte(depenses.date, tomorrowStart))),
+      db.select({ montant: depenses.montant }).from(depenses).where(and(eq(depenses.userId, userId), eq(depenses.recurrence, "ponctuelle"), gte(depenses.date, todayStart), lte(depenses.date, tomorrowStart))),
       db.select({ total: ventes.total }).from(ventes).where(and(eq(ventes.userId, userId), gte(ventes.date, yesterdayStart), lte(ventes.date, todayStart))),
-      db.select({ montant: depenses.montant }).from(depenses).where(and(eq(depenses.userId, userId), gte(depenses.date, yesterdayStart), lte(depenses.date, todayStart))),
+      db.select({ montant: depenses.montant }).from(depenses).where(and(eq(depenses.userId, userId), eq(depenses.recurrence, "ponctuelle"), gte(depenses.date, yesterdayStart), lte(depenses.date, todayStart))),
       // Achats fournisseurs aujourd'hui
       db.select({ total: sql<string>`coalesce(sum(${achatsFournisseurs.quantite} * ${achatsFournisseurs.prixUnitaire}::numeric), 0)` })
         .from(achatsFournisseurs)
@@ -307,13 +307,13 @@ export class DatabaseStorage implements IStorage {
         .groupBy(produits.nom)
         .orderBy(desc(sql`sum(${venteItems.quantite} * (${venteItems.prixUnitaire}::numeric - coalesce(${produits.prixAchat}::numeric, 0)))`))
         .limit(5),
-      // Dépenses fixes du mois (loyer, électricité, eau, salaires)
+      // Dépenses mensuelles (récurrentes) du mois en cours
       db.select({ montant: depenses.montant })
         .from(depenses)
         .where(and(
           eq(depenses.userId, userId),
+          eq(depenses.recurrence, "mensuelle"),
           gte(depenses.date, startOfMonth),
-          inArray(depenses.categorie, ["Loyer", "Électricité (CEET)", "Eau (TdE)", "Salaires"]),
         )),
       // Alertes stock < 10
       db.select({ id: produits.id, nom: produits.nom, stock: produits.stock, categorie: produits.categorie })
@@ -324,28 +324,31 @@ export class DatabaseStorage implements IStorage {
     ]);
 
     const ventesAujourdhui = ventesToday.reduce((s, v) => s + parseFloat(v.total as string), 0);
-    const depensesAujourdhui = depensesToday.reduce((s, d) => s + parseFloat(d.montant as string), 0);
     const totalVentesHier = ventesHier.reduce((s, v) => s + parseFloat(v.total as string), 0);
-    const totalDepensesHier = depensesHier.reduce((s, d) => s + parseFloat(d.montant as string), 0);
+    const depensesPonctuellesAujourdhui = depensesPonctuellesToday.reduce((s, d) => s + parseFloat(d.montant as string), 0);
+    const depensesPonctuellesHierTotal = depensesPonctuellesHier.reduce((s, d) => s + parseFloat(d.montant as string), 0);
     const achatsAujourdhui = parseFloat(achatsToday[0]?.total ?? "0");
     const totalAchatsHier = parseFloat(achatsHier[0]?.total ?? "0");
     const coutsVentesAujourdhui = parseFloat(cogsRow[0]?.cogs ?? "0");
-    const beneficeNetAujourdhui = ventesAujourdhui - coutsVentesAujourdhui - depensesAujourdhui;
-    const totalDepensesFixesMois = depensesFixesMois.reduce((s, d) => s + parseFloat(d.montant as string), 0);
 
-    // Prévisionnel: calcul du montant à mettre de côté chaque jour
+    // Mensualisation : on amortit les dépenses récurrentes mensuelles sur le nombre de jours du mois
+    const totalDepensesMensuellesMois = depensesMensuellesMois.reduce((s, d) => s + parseFloat(d.montant as string), 0);
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const dayOfMonth = now.getDate();
     const daysLeft = daysInMonth - dayOfMonth + 1;
-    const provisionnementJournalier = daysInMonth > 0 ? Math.ceil(totalDepensesFixesMois / daysInMonth) : 0;
-    const restantAMettreDecote = Math.max(0, totalDepensesFixesMois - depensesFixesMois
-      .filter(() => true)
-      .reduce((s, d) => s + parseFloat(d.montant as string), 0));
+    const provisionMensuelleParJour = daysInMonth > 0 ? totalDepensesMensuellesMois / daysInMonth : 0;
+
+    // Total dépenses imputées sur la journée = ponctuelles du jour + quote-part mensuelle
+    const depensesAujourdhui = depensesPonctuellesAujourdhui + provisionMensuelleParJour;
+    const totalDepensesHier = depensesPonctuellesHierTotal + provisionMensuelleParJour;
+    const beneficeNetAujourdhui = ventesAujourdhui - coutsVentesAujourdhui - depensesAujourdhui;
 
     return {
       ventesAujourdhui,
       achatsAujourdhui,
       depensesAujourdhui,
+      depensesPonctuellesAujourdhui,
+      provisionMensuelleParJour,
       coutsVentesAujourdhui,
       beneficeNetAujourdhui,
       totalVentesHier,
@@ -353,8 +356,8 @@ export class DatabaseStorage implements IStorage {
       totalDepensesHier,
       topProduits: topProduitsRaw.map((p) => ({ nom: p.nom, quantite: Number(p.quantite), total: Number(p.total), benefice: Number(p.benefice) })),
       previsionnel: {
-        totalDepensesFixesMois,
-        provisionnementJournalier,
+        totalDepensesFixesMois: totalDepensesMensuellesMois,
+        provisionnementJournalier: Math.ceil(provisionMensuelleParJour),
         daysLeft,
         daysInMonth,
         dayOfMonth,
@@ -390,12 +393,13 @@ export class DatabaseStorage implements IStorage {
         .where(and(eq(ventes.userId, userId), gte(ventes.date, sevenDaysAgo), lt(ventes.date, tomorrowStart)))
         .groupBy(sql`date_trunc('day', ${ventes.date})`)
         .orderBy(sql`date_trunc('day', ${ventes.date})`),
+      // Dépenses PONCTUELLES par jour (les mensuelles seront amorties séparément)
       db.select({
         jour: sql<string>`to_char(date_trunc('day', ${depenses.date}), 'YYYY-MM-DD')`,
         total: sql<string>`coalesce(sum(${depenses.montant}::numeric), 0)`,
       })
         .from(depenses)
-        .where(and(eq(depenses.userId, userId), gte(depenses.date, sevenDaysAgo), lt(depenses.date, tomorrowStart)))
+        .where(and(eq(depenses.userId, userId), eq(depenses.recurrence, "ponctuelle"), gte(depenses.date, sevenDaysAgo), lt(depenses.date, tomorrowStart)))
         .groupBy(sql`date_trunc('day', ${depenses.date})`)
         .orderBy(sql`date_trunc('day', ${depenses.date})`),
       // Achats fournisseurs par jour
@@ -409,17 +413,31 @@ export class DatabaseStorage implements IStorage {
         .orderBy(sql`date_trunc('day', ${achatsFournisseurs.date})`),
     ]);
 
+    // Dépenses MENSUELLES par mois (pour amortir au prorata sur les jours de chaque mois)
+    const depensesMensuellesParMois = await db.select({
+      mois: sql<string>`to_char(date_trunc('month', ${depenses.date}), 'YYYY-MM')`,
+      total: sql<string>`coalesce(sum(${depenses.montant}::numeric), 0)`,
+    })
+      .from(depenses)
+      .where(and(eq(depenses.userId, userId), eq(depenses.recurrence, "mensuelle"), gte(depenses.date, sevenDaysAgo), lt(depenses.date, tomorrowStart)))
+      .groupBy(sql`date_trunc('month', ${depenses.date})`);
+
     const JOURS_FR = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
     const derniers7jours = Array.from({ length: 7 }, (_, i) => {
       const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6 + i);
       const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+      const monthKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}`;
+      const daysInDayMonth = new Date(day.getFullYear(), day.getMonth() + 1, 0).getDate();
       const vRow = ventesJ.find((r) => r.jour === key);
       const cRow = cogsJ.find((r) => r.jour === key);
       const dRow = depensesJ.find((r) => r.jour === key);
       const aRow = achatsJ.find((r) => r.jour === key);
+      const mensRow = depensesMensuellesParMois.find((r) => r.mois === monthKey);
       const v = parseFloat(vRow?.total ?? "0");
       const c = parseFloat(cRow?.cogs ?? "0");
-      const d = parseFloat(dRow?.total ?? "0");
+      const dPonctuelles = parseFloat(dRow?.total ?? "0");
+      const dMensuellesAmorties = parseFloat(mensRow?.total ?? "0") / daysInDayMonth;
+      const d = dPonctuelles + dMensuellesAmorties;
       const a = parseFloat(aRow?.total ?? "0");
       return { label: `${JOURS_FR[day.getDay()]} ${day.getDate()}`, ventes: v, achats: a, cogs: c, depenses: d, benefice: v - a - d };
     });

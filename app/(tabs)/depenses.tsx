@@ -25,6 +25,7 @@ interface Depense {
   libelle: string;
   montant: string;
   categorie: string;
+  recurrence: "ponctuelle" | "mensuelle";
   date: string;
   note?: string;
 }
@@ -68,6 +69,7 @@ function DepenseModal({
   const [libelle, setLibelle] = useState(initial?.libelle ?? "");
   const [montant, setMontant] = useState(initial?.montant?.toString() ?? "");
   const [categorie, setCategorie] = useState(initial?.categorie ?? "Général");
+  const [recurrence, setRecurrence] = useState<"ponctuelle" | "mensuelle">(initial?.recurrence ?? "ponctuelle");
   const [note, setNote] = useState(initial?.note ?? "");
   const [error, setError] = useState("");
 
@@ -76,14 +78,24 @@ function DepenseModal({
       setLibelle(initial?.libelle ?? "");
       setMontant(initial?.montant?.toString() ?? "");
       setCategorie(initial?.categorie ?? "Général");
+      setRecurrence(initial?.recurrence ?? (initial ? "ponctuelle" : "ponctuelle"));
       setNote(initial?.note ?? "");
       setError("");
     }
   }, [visible, initial]);
 
+  // Suggérer "mensuelle" automatiquement quand on choisit Loyer / Eau / Electricité / Salaires
+  const CATS_MENSUELLES_PAR_DEFAUT = ["Loyer", "Eau (TdE)", "Électricité (CEET)", "Salaires"];
+  const handleSelectCategorie = (id: string) => {
+    setCategorie(id);
+    if (!initial && CATS_MENSUELLES_PAR_DEFAUT.includes(id)) {
+      setRecurrence("mensuelle");
+    }
+  };
+
   const mutation = useMutation({
     mutationFn: async () => {
-      const body = { libelle, montant, categorie, note: note || undefined, date: new Date().toISOString() };
+      const body = { libelle, montant, categorie, recurrence, note: note || undefined, date: new Date().toISOString() };
       if (initial) {
         const res = await apiRequest("PUT", `/api/depenses/${initial.id}`, body);
         return res.json();
@@ -130,7 +142,7 @@ function DepenseModal({
                   <Pressable
                     key={c.id}
                     style={[dm.catItem, categorie === c.id && { borderColor: c.color, backgroundColor: c.color + "15" }]}
-                    onPress={() => setCategorie(c.id)}
+                    onPress={() => handleSelectCategorie(c.id)}
                   >
                     <Ionicons name={c.icon} size={20} color={categorie === c.id ? c.color : Colors.textMuted} />
                     <Text style={[dm.catItemText, categorie === c.id && { color: c.color, fontFamily: "Inter_600SemiBold" }]} numberOfLines={2}>
@@ -149,6 +161,34 @@ function DepenseModal({
                   <Text style={[dm.catHintText, { color: selectedCat.color }]}>{selectedCat.desc}</Text>
                 </View>
               )}
+            </View>
+
+            <View style={dm.field}>
+              <Text style={dm.label}>Récurrence</Text>
+              <View style={dm.recRow}>
+                <Pressable
+                  onPress={() => setRecurrence("ponctuelle")}
+                  style={[dm.recBtn, recurrence === "ponctuelle" && dm.recBtnActive]}
+                >
+                  <Ionicons name="calendar-outline" size={16} color={recurrence === "ponctuelle" ? Colors.primary : Colors.textMuted} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[dm.recLabel, recurrence === "ponctuelle" && { color: Colors.primary }]}>Ponctuelle</Text>
+                    <Text style={dm.recHint}>Une seule fois</Text>
+                  </View>
+                  {recurrence === "ponctuelle" && <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />}
+                </Pressable>
+                <Pressable
+                  onPress={() => setRecurrence("mensuelle")}
+                  style={[dm.recBtn, recurrence === "mensuelle" && dm.recBtnActiveAccent]}
+                >
+                  <Ionicons name="repeat" size={16} color={recurrence === "mensuelle" ? Colors.accent : Colors.textMuted} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[dm.recLabel, recurrence === "mensuelle" && { color: Colors.accent }]}>Mensuelle</Text>
+                    <Text style={dm.recHint}>Tous les mois (amortie/jour)</Text>
+                  </View>
+                  {recurrence === "mensuelle" && <Ionicons name="checkmark-circle" size={18} color={Colors.accent} />}
+                </Pressable>
+              </View>
             </View>
 
             <View style={dm.field}>
@@ -215,6 +255,12 @@ const dm = StyleSheet.create({
   catCheck: { position: "absolute", top: 6, right: 6, width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   catHint: { marginTop: 8, paddingLeft: 10, borderLeftWidth: 3, borderRadius: 2 },
   catHintText: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  recRow: { gap: 8 },
+  recBtn: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.background },
+  recBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primary + "10" },
+  recBtnActiveAccent: { borderColor: Colors.accent, backgroundColor: Colors.accent + "15" },
+  recLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.text },
+  recHint: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: 1 },
   footer: { padding: 20, borderTopWidth: 1, borderTopColor: Colors.border },
   saveBtn: { backgroundColor: Colors.danger, borderRadius: 14, paddingVertical: 16, alignItems: "center", shadowColor: Colors.danger, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 4 },
   saveBtnText: { color: "#fff", fontSize: 16, fontFamily: "Inter_700Bold" },
@@ -267,9 +313,10 @@ export default function DepensesScreen() {
 
   const renderItem = ({ item }: { item: Depense }) => {
     const cat = getCat(item.categorie);
+    const isMensuelle = item.recurrence === "mensuelle";
     return (
       <Pressable
-        style={({ pressed }) => [ds.depCard, { opacity: pressed ? 0.95 : 1 }]}
+        style={({ pressed }) => [ds.depCard, { opacity: pressed ? 0.95 : 1 }, isMensuelle && { borderLeftWidth: 4, borderLeftColor: Colors.accent }]}
         onPress={() => { setEditing(item); setModalVisible(true); }}
         onLongPress={() => confirmDelete(item)}
       >
@@ -277,7 +324,15 @@ export default function DepensesScreen() {
           <Ionicons name={cat.icon} size={20} color={cat.color} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={ds.depLibelle}>{item.libelle}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <Text style={ds.depLibelle}>{item.libelle}</Text>
+            {isMensuelle && (
+              <View style={ds.badgeMensuelle}>
+                <Ionicons name="repeat" size={10} color={Colors.accent} />
+                <Text style={ds.badgeMensuelleText}>Mensuelle</Text>
+              </View>
+            )}
+          </View>
           <View style={ds.depMeta}>
             <Text style={[ds.depCat, { color: cat.color }]}>{item.categorie}</Text>
             <Text style={ds.dot}>·</Text>
@@ -285,7 +340,14 @@ export default function DepensesScreen() {
           </View>
           {item.note ? <Text style={ds.depNote} numberOfLines={1}>{item.note}</Text> : null}
         </View>
-        <Text style={ds.depMontant}>{formatFCFA(item.montant)}</Text>
+        <View style={{ alignItems: "flex-end" }}>
+          <Text style={ds.depMontant}>{formatFCFA(item.montant)}</Text>
+          {isMensuelle && (
+            <Text style={ds.depMontantHint}>
+              ≈ {formatFCFA(Math.round(Number(item.montant) / new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()))} / jour
+            </Text>
+          )}
+        </View>
       </Pressable>
     );
   };
@@ -378,6 +440,9 @@ const ds = StyleSheet.create({
   depDate: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textMuted },
   depNote: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: 3 },
   depMontant: { fontSize: 15, fontFamily: "Inter_700Bold", color: Colors.danger, flexShrink: 0 },
+  depMontantHint: { fontSize: 10, fontFamily: "Inter_400Regular", color: Colors.accent, marginTop: 2 },
+  badgeMensuelle: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: Colors.accent + "20" },
+  badgeMensuelleText: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: Colors.accent },
   loadingBox: { flex: 1, alignItems: "center", justifyContent: "center" },
   emptyBox: { alignItems: "center", paddingTop: 60, gap: 10 },
   emptyText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.textMuted, textAlign: "center" },
