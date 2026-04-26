@@ -1,3 +1,4 @@
+import { showAlert } from "@/lib/alert";
 import React, { useState } from "react";
 import {
   View,
@@ -282,11 +283,11 @@ export default function FournisseursScreen() {
       qc.invalidateQueries({ queryKey: ["/api/fournisseurs"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
-    onError: (e: any) => Alert.alert("Erreur", e.message),
+    onError: (e: any) => showAlert("Erreur", e.message),
   });
 
   const confirmDelete = (f: Fournisseur) => {
-    Alert.alert(
+    showAlert(
       "Supprimer le fournisseur",
       `Voulez-vous supprimer "${f.nom}" ? Les achats existants ne seront pas supprimés.`,
       [

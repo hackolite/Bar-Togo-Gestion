@@ -1,3 +1,4 @@
+import { showAlert } from "@/lib/alert";
 import React, { useState } from "react";
 import {
   View,
@@ -572,7 +573,7 @@ function ImportCSVAchatsModal({ visible, onClose }: { visible: boolean; onClose:
       setResult(data);
       setStep("done");
     },
-    onError: (e: any) => Alert.alert("Erreur", e.message),
+    onError: (e: any) => showAlert("Erreur", e.message),
   });
 
   return (
@@ -783,7 +784,7 @@ export default function AchatsScreen() {
   });
 
   const confirmDelete = (a: AchatFournisseur) => {
-    Alert.alert(
+    showAlert(
       "Supprimer l'achat",
       `Voulez-vous supprimer cet achat de ${formatFCFA(Number(a.prixUnitaire) * a.quantite)} ?`,
       [

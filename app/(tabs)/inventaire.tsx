@@ -1,3 +1,4 @@
+import { showAlert } from "@/lib/alert";
 import React, { useState } from "react";
 import {
   View,
@@ -113,7 +114,7 @@ function ProduitModal({
       if (Platform.OS !== "web") {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== "granted") {
-          Alert.alert("Permission refusée", "L'accès à la galerie est nécessaire pour ajouter une photo.");
+          showAlert("Permission refusée", "L'accès à la galerie est nécessaire pour ajouter une photo.");
           return;
         }
       }
@@ -132,7 +133,7 @@ function ProduitModal({
         setImageMime(mime);
       }
     } catch (e: any) {
-      Alert.alert("Erreur", "Impossible de sélectionner l'image");
+      showAlert("Erreur", "Impossible de sélectionner l'image");
     }
   };
 
@@ -141,7 +142,7 @@ function ProduitModal({
       if (Platform.OS !== "web") {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== "granted") {
-          Alert.alert("Permission refusée", "L'accès à la caméra est nécessaire.");
+          showAlert("Permission refusée", "L'accès à la caméra est nécessaire.");
           return;
         }
       }
@@ -158,7 +159,7 @@ function ProduitModal({
         setImageMime(asset.mimeType ?? "image/jpeg");
       }
     } catch (e: any) {
-      Alert.alert("Erreur", "Impossible de prendre la photo");
+      showAlert("Erreur", "Impossible de prendre la photo");
     }
   };
 
@@ -167,7 +168,7 @@ function ProduitModal({
       pickImage();
       return;
     }
-    Alert.alert("Photo du produit", "Choisissez une source", [
+    showAlert("Photo du produit", "Choisissez une source", [
       { text: "Galerie", onPress: pickImage },
       { text: "Appareil photo", onPress: takePhoto },
       { text: "Supprimer la photo", style: "destructive", onPress: () => { setImageUri(null); setImageBase64(null); } },
@@ -476,7 +477,7 @@ function ImportCSVModal({ visible, onClose }: { visible: boolean; onClose: () =>
       setResult(data);
       setStep("done");
     },
-    onError: (e: any) => Alert.alert("Erreur", e.message),
+    onError: (e: any) => showAlert("Erreur", e.message),
   });
 
   return (
@@ -664,9 +665,9 @@ export default function InventaireScreen() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["/api/produits"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("Produits chargés ✓", `${data.count} produits typiques d'un bar-restaurant togolais ont été ajoutés.`);
+      showAlert("Produits chargés ✓", `${data.count} produits typiques d'un bar-restaurant togolais ont été ajoutés.`);
     },
-    onError: (e: any) => Alert.alert("Erreur", e.message),
+    onError: (e: any) => showAlert("Erreur", e.message),
   });
 
   const filtered = produits.filter((p) => {
@@ -680,7 +681,7 @@ export default function InventaireScreen() {
   });
 
   const confirmDelete = (p: Produit) => {
-    Alert.alert("Supprimer le produit", `Voulez-vous supprimer "${p.nom}" ?`, [
+    showAlert("Supprimer le produit", `Voulez-vous supprimer "${p.nom}" ?`, [
       { text: "Annuler", style: "cancel" },
       { text: "Supprimer", style: "destructive", onPress: () => deleteMutation.mutate(p.id) },
     ]);
@@ -818,7 +819,7 @@ export default function InventaireScreen() {
                   <Text style={styles.emptySubText}>Ajoutez vos produits manuellement ou chargez la liste par défaut</Text>
                   <Pressable
                     style={({ pressed }) => [styles.seedBtn, { opacity: pressed ? 0.85 : 1 }]}
-                    onPress={() => Alert.alert(
+                    onPress={() => showAlert(
                       "Charger les produits par défaut",
                       "Cela va ajouter ~100 produits typiques d'un bar-restaurant togolais (bières, softs, cocktails, nourriture…).",
                       [

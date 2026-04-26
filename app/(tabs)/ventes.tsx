@@ -1,3 +1,4 @@
+import { showAlert } from "@/lib/alert";
 import React, { useState } from "react";
 import {
   View,
@@ -481,7 +482,7 @@ function ImportCSVVentesModal({ visible, onClose }: { visible: boolean; onClose:
       setResult(data);
       setStep("done");
     },
-    onError: (e: any) => Alert.alert("Erreur", e.message),
+    onError: (e: any) => showAlert("Erreur", e.message),
   });
 
   return (
@@ -694,7 +695,7 @@ export default function VentesScreen() {
   });
 
   const confirmDelete = (v: VenteRecord) => {
-    Alert.alert(
+    showAlert(
       "Supprimer la vente",
       `Voulez-vous supprimer cette vente de ${formatFCFA(v.total)} ?`,
       [

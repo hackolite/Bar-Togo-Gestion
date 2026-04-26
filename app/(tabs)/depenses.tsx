@@ -1,3 +1,4 @@
+import { showAlert } from "@/lib/alert";
 import React, { useState } from "react";
 import {
   View,
@@ -246,7 +247,7 @@ export default function DepensesScreen() {
   });
 
   const confirmDelete = (d: Depense) => {
-    Alert.alert("Supprimer la dépense", `Voulez-vous supprimer "${d.libelle}" ?`, [
+    showAlert("Supprimer la dépense", `Voulez-vous supprimer "${d.libelle}" ?`, [
       { text: "Annuler", style: "cancel" },
       { text: "Supprimer", style: "destructive", onPress: () => deleteMutation.mutate(d.id) },
     ]);

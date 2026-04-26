@@ -4,20 +4,24 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 /**
  * Gets the base URL for the Express API server.
- * On web, uses the current window's origin (same origin as the served page).
- * On native, uses EXPO_PUBLIC_DOMAIN env var.
+ * Priority:
+ *  1. EXPO_PUBLIC_DOMAIN env var (set in dev to point at backend on port 5000,
+ *     and used on native builds).
+ *  2. On web (production build served by the same Express server),
+ *     fall back to the current window's origin.
  */
 export function getApiUrl(): string {
+  const host = process.env.EXPO_PUBLIC_DOMAIN;
+  if (host) {
+    const proto = host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https";
+    return new URL(`${proto}://${host}`).href;
+  }
+
   if (Platform.OS === "web" && typeof window !== "undefined" && window.location?.origin) {
     return window.location.origin + "/";
   }
 
-  const host = process.env.EXPO_PUBLIC_DOMAIN;
-  if (!host) {
-    throw new Error("EXPO_PUBLIC_DOMAIN is not set");
-  }
-
-  return new URL(`https://${host}`).href;
+  throw new Error("EXPO_PUBLIC_DOMAIN is not set");
 }
 
 async function throwIfResNotOk(res: Response) {
