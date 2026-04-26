@@ -1,3 +1,4 @@
+import { isLiquidGlassAvailable } from "expo-glass-effect";
 import React, { useRef, useEffect, useState } from "react";
 import {
   View,
@@ -317,7 +318,7 @@ export default function DashboardScreen() {
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("7j");
   const [chartMetric, setChartMetric] = useState<ChartMetric>("marge");
 
-  const topInsets = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
+  const topInsets = isLiquidGlassAvailable() ? Math.max(insets.top, 67) : insets.top;
   const caAujourdhui = (stats?.ventesAujourdhui ?? 0) - (stats?.achatsAujourdhui ?? 0);
   const caHier = (stats?.totalVentesHier ?? 0) - (stats?.totalAchatsHier ?? 0);
   const evol = pct(caAujourdhui, caHier);

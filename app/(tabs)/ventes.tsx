@@ -1,3 +1,4 @@
+import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { showAlert } from "@/lib/alert";
 import React, { useState } from "react";
 import {
@@ -840,7 +841,7 @@ export default function VentesScreen() {
     })
     .reduce((s, v) => s + Number(v.total), 0);
 
-  const topInsets = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
+  const topInsets = isLiquidGlassAvailable() ? Math.max(insets.top, 67) : insets.top;
 
   const renderVente = ({ item }: { item: VenteRecord }) => (
     <View style={vs.venteCard}>
