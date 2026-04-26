@@ -1,14 +1,12 @@
 import { isLiquidGlassAvailable } from "expo-glass-effect";
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
-  Pressable,
   ActivityIndicator,
   Platform,
-  ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -40,8 +38,6 @@ interface Vente {
   items?: VenteItem[];
 }
 
-type StockFilter = "normal" | "bas" | "rupture";
-
 const CAT_EMOJIS: Record<string, string> = {
   Boissons: "🥤",
   Alcools: "🍺",
@@ -52,7 +48,6 @@ const CAT_EMOJIS: Record<string, string> = {
 
 export default function StockScreen() {
   const insets = useSafeAreaInsets();
-  const [filter, setFilter] = useState<StockFilter>("normal");
 
   const { data: produits = [], isLoading: loadingProduits } = useQuery<Produit[]>({
     queryKey: ["/api/produits"],
@@ -100,12 +95,8 @@ export default function StockScreen() {
   const totalSortants = Object.values(sortantsByProduit).reduce((s, v) => s + v, 0);
 
   const filteredProduits = React.useMemo(() => {
-    let p = [...produits].sort((a, b) => a.nom.localeCompare(b.nom));
-    if (filter === "bas") p = p.filter((x) => x.stock > 0 && x.stock < 10);
-    if (filter === "rupture") p = p.filter((x) => x.stock === 0);
-    if (filter === "normal") p = p.filter((x) => x.stock >= 10);
-    return p;
-  }, [produits, filter]);
+    return [...produits].sort((a, b) => a.nom.localeCompare(b.nom));
+  }, [produits]);
 
   const topInsets = isLiquidGlassAvailable() ? Math.max(insets.top, 67) : insets.top;
 
@@ -191,32 +182,6 @@ export default function StockScreen() {
         </View>
       </View>
 
-      {/* Filter tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterRow}
-        contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
-      >
-        {(
-          [
-            ["normal", "Normal"],
-            ["bas", "Stock bas"],
-            ["rupture", "Rupture"],
-          ] as [StockFilter, string][]
-        ).map(([key, label]) => (
-          <Pressable
-            key={key}
-            style={[styles.filterBtn, filter === key && styles.filterBtnActive]}
-            onPress={() => setFilter(key)}
-          >
-            <Text style={[styles.filterText, filter === key && styles.filterTextActive]}>
-              {label}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
-
       {/* Column headers */}
       <View style={styles.listHeader}>
         <Text style={styles.listHeaderText}>Produit</Text>
@@ -239,13 +204,7 @@ export default function StockScreen() {
         ListEmptyComponent={
           <View style={styles.emptyBox}>
             <Text style={{ fontSize: 48 }}>📦</Text>
-            <Text style={styles.emptyText}>
-              {filter === "normal"
-                ? "Aucun produit en stock normal"
-                : filter === "bas"
-                ? "Aucun produit en stock bas"
-                : "Aucune rupture de stock"}
-            </Text>
+            <Text style={styles.emptyText}>Aucun produit en stock</Text>
           </View>
         }
       />
@@ -289,18 +248,6 @@ const styles = StyleSheet.create({
   },
   summaryLabel: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textMuted },
   summaryValue: { fontSize: 20, fontFamily: "Inter_700Bold" },
-  filterRow: { marginBottom: 8 },
-  filterBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    backgroundColor: Colors.surface,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-  },
-  filterBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  filterText: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.textMuted },
-  filterTextActive: { color: "#fff" },
   listHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
