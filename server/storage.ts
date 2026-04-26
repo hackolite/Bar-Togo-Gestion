@@ -414,12 +414,15 @@ export class DatabaseStorage implements IStorage {
     ]);
 
     // Dépenses MENSUELLES par mois (pour amortir au prorata sur les jours de chaque mois)
+    // On part du début du mois contenant sevenDaysAgo pour ne pas manquer les dépenses
+    // mensuelles enregistrées avant la fenêtre de 7 jours mais appartenant au même mois.
+    const startOfFirstMonth = new Date(sevenDaysAgo.getFullYear(), sevenDaysAgo.getMonth(), 1);
     const depensesMensuellesParMois = await db.select({
       mois: sql<string>`to_char(date_trunc('month', ${depenses.date}), 'YYYY-MM')`,
       total: sql<string>`coalesce(sum(${depenses.montant}::numeric), 0)`,
     })
       .from(depenses)
-      .where(and(eq(depenses.userId, userId), eq(depenses.recurrence, "mensuelle"), gte(depenses.date, sevenDaysAgo), lt(depenses.date, tomorrowStart)))
+      .where(and(eq(depenses.userId, userId), eq(depenses.recurrence, "mensuelle"), gte(depenses.date, startOfFirstMonth), lt(depenses.date, tomorrowStart)))
       .groupBy(sql`date_trunc('month', ${depenses.date})`);
 
     const JOURS_FR = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
