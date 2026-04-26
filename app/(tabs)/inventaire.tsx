@@ -789,6 +789,18 @@ export default function InventaireScreen() {
         ) : null}
       </View>
 
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catRow} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>
+        <Pressable style={[styles.catFilterBtn, !catFilter && styles.catFilterBtnActive]} onPress={() => setCatFilter(null)}>
+          <Text style={[styles.catFilterText, !catFilter && styles.catFilterTextActive]}>Tous</Text>
+        </Pressable>
+        {CATEGORIES.map((c) => (
+          <Pressable key={c} style={[styles.catFilterBtn, catFilter === c && styles.catFilterBtnActive]} onPress={() => setCatFilter(catFilter === c ? null : c)}>
+            <Text style={styles.catFilterEmojiSmall}>{CAT_EMOJIS[c]}</Text>
+            <Text style={[styles.catFilterText, catFilter === c && styles.catFilterTextActive]}>{c}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+
       {isLoading ? (
         <View style={styles.loadingBox}><ActivityIndicator color={Colors.primary} size="large" /></View>
       ) : (
@@ -798,19 +810,6 @@ export default function InventaireScreen() {
           renderItem={renderItem}
           contentContainerStyle={[styles.list, { paddingBottom: Platform.OS === "web" ? 118 : 100 }]}
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catRow} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>
-              <Pressable style={[styles.catFilterBtn, !catFilter && styles.catFilterBtnActive]} onPress={() => setCatFilter(null)}>
-                <Text style={[styles.catFilterText, !catFilter && styles.catFilterTextActive]}>Tous</Text>
-              </Pressable>
-              {CATEGORIES.map((c) => (
-                <Pressable key={c} style={[styles.catFilterBtn, catFilter === c && styles.catFilterBtnActive]} onPress={() => setCatFilter(catFilter === c ? null : c)}>
-                  <Text style={styles.catFilterEmojiSmall}>{CAT_EMOJIS[c]}</Text>
-                  <Text style={[styles.catFilterText, catFilter === c && styles.catFilterTextActive]}>{c}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          }
           ListEmptyComponent={
             <View style={styles.emptyBox}>
               <Text style={{ fontSize: 52 }}>📦</Text>
