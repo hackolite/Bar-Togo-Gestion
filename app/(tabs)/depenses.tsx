@@ -1,3 +1,4 @@
+import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { showAlert } from "@/lib/alert";
 import React, { useState } from "react";
 import {
@@ -309,7 +310,7 @@ export default function DepensesScreen() {
 
   const totalFiltered = filtered.reduce((s, d) => s + Number(d.montant), 0);
 
-  const topInsets = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
+  const topInsets = isLiquidGlassAvailable() ? Math.max(insets.top, 67) : insets.top;
 
   const renderItem = ({ item }: { item: Depense }) => {
     const cat = getCat(item.categorie);

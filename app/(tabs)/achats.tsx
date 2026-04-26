@@ -1,3 +1,4 @@
+import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { showAlert } from "@/lib/alert";
 import React, { useState } from "react";
 import {
@@ -815,7 +816,7 @@ export default function AchatsScreen() {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [achats, search]);
 
-  const topInsets = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
+  const topInsets = isLiquidGlassAvailable() ? Math.max(insets.top, 67) : insets.top;
 
   const renderAchat = ({ item }: { item: AchatFournisseur }) => {
     const total = Number(item.prixUnitaire) * item.quantite;
