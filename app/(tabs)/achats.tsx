@@ -458,77 +458,77 @@ const am = StyleSheet.create({
 
 // ── ÉCRAN ACHATS (CATALOGUE) ──
 const CSV_ACHATS_EXEMPLE = `date,produit,quantite,prixUnitaire,fournisseur,note
-2024-01-03,Flag Spéciale 65cl,96,500,BB Lomé,Commande semaine 1
-2024-01-03,Castel Beer 65cl,48,500,BB Lomé,Commande semaine 1
-2024-01-03,Flag Spéciale 33cl,72,300,BB Lomé,Commande semaine 1
-2024-01-03,Coca-Cola 33cl,48,250,Brasseries Lomé,
-2024-01-03,Fanta Orange 33cl,48,250,Brasseries Lomé,
-2024-01-10,Flag Spéciale 65cl,96,500,BB Lomé,Commande semaine 2
-2024-01-10,Heineken 33cl,24,600,Importateur,
-2024-01-10,Guilele 65cl,60,450,BB Lomé,
-2024-01-17,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-01-17,Castel Beer 65cl,48,500,BB Lomé,
-2024-01-17,Sprite 33cl,36,250,Brasseries Lomé,
-2024-01-24,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-01-24,Malta Guinness 33cl,36,300,BB Lomé,
-2024-01-31,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-01-31,Castel Beer 65cl,48,500,BB Lomé,
-2024-02-07,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-02-07,Heineken 33cl,24,600,Importateur,
-2024-02-07,Guilele 65cl,60,450,BB Lomé,
-2024-02-14,Flag Spéciale 65cl,120,500,BB Lomé,Saint-Valentin
-2024-02-14,Castel Beer 65cl,60,500,BB Lomé,Saint-Valentin
-2024-02-14,Champagne (flûte),6,1500,Importateur,Saint-Valentin
-2024-02-21,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-02-28,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-02-28,Coca-Cola 33cl,48,250,Brasseries Lomé,
-2024-03-06,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-03-06,Castel Beer 65cl,48,500,BB Lomé,
-2024-03-13,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-03-20,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-03-27,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-03-27,Heineken 33cl,24,600,Importateur,
-2024-04-03,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-04-03,Castel Beer 65cl,48,500,BB Lomé,
-2024-04-10,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-04-17,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-04-24,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-05-01,Flag Spéciale 65cl,144,500,BB Lomé,Fête du travail
-2024-05-01,Castel Beer 65cl,96,500,BB Lomé,Fête du travail
-2024-05-08,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-05-15,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-05-22,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-06-05,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-06-05,Castel Beer 65cl,48,500,BB Lomé,
-2024-06-12,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-06-19,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-06-26,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-07-03,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-07-10,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-07-10,Guilele 65cl,60,450,BB Lomé,
-2024-07-17,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-08-07,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-08-07,Castel Beer 65cl,48,500,BB Lomé,
-2024-08-14,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-09-04,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-09-11,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-09-18,Heineken 33cl,24,600,Importateur,
-2024-10-02,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-10-09,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-10-09,Castel Beer 65cl,48,500,BB Lomé,
-2024-11-06,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-11-13,Flag Spéciale 65cl,96,500,BB Lomé,
-2024-12-04,Flag Spéciale 65cl,144,500,BB Lomé,Fêtes de fin d'année
-2024-12-04,Castel Beer 65cl,96,500,BB Lomé,Fêtes
-2024-12-04,Heineken 33cl,48,600,Importateur,Fêtes
-2024-12-04,Champagne (flûte),12,1500,Importateur,Fêtes
-2024-12-18,Flag Spéciale 65cl,144,500,BB Lomé,Stock Noël
-2024-12-18,Castel Beer 65cl,72,500,BB Lomé,Stock Noël
-2025-01-08,Flag Spéciale 65cl,96,500,BB Lomé,
-2025-01-08,Castel Beer 65cl,48,500,BB Lomé,
-2025-01-15,Flag Spéciale 65cl,96,500,BB Lomé,
-2025-02-05,Flag Spéciale 65cl,96,500,BB Lomé,
-2025-02-12,Flag Spéciale 65cl,120,500,BB Lomé,Saint-Valentin stock`;
+2026-04-19,Flag Spéciale 65cl,144,500,BB Lomé,Commande semaine
+2026-04-19,Castel Beer 65cl,96,500,BB Lomé,Commande semaine
+2026-04-19,Guilele 65cl,72,450,BB Lomé,
+2026-04-19,Flag Spéciale 33cl,96,300,BB Lomé,
+2026-04-19,Castel Beer 33cl,48,300,BB Lomé,
+2026-04-19,Guinness 50cl,48,600,Importateur,
+2026-04-19,Heineken 33cl,48,600,Importateur,
+2026-04-19,Desperados 33cl,24,700,Importateur,
+2026-04-19,Coca-Cola 33cl,96,250,Brasseries Lomé,
+2026-04-19,Fanta Orange 33cl,72,250,Brasseries Lomé,
+2026-04-19,Fanta Citron 33cl,48,250,Brasseries Lomé,
+2026-04-19,Sprite 33cl,48,250,Brasseries Lomé,
+2026-04-19,Malta Guinness 33cl,48,300,BB Lomé,
+2026-04-19,Schweppes Tonic 33cl,36,350,Importateur,
+2026-04-19,Schweppes Citrus 33cl,24,350,Importateur,
+2026-04-19,Eau Minérale SBL 50cl,120,150,Distributeur,
+2026-04-19,Eau Minérale SBL 1.5L,48,350,Distributeur,
+2026-04-19,Eau Minérale Omi 50cl,72,150,Distributeur,
+2026-04-19,Chips Crunchy,60,150,Grossiste,
+2026-04-19,Biscuits Salés,48,100,Grossiste,
+2026-04-19,Youki Citrus 33cl,48,200,Grossiste,
+2026-04-19,Youki Ananas 33cl,48,200,Grossiste,
+2026-04-19,Mirinda Orange 33cl,48,200,Grossiste,
+2026-04-19,Pepsi 33cl,36,220,Grossiste,
+2026-04-19,7UP 33cl,36,220,Grossiste,
+2026-04-21,Flag Spéciale 65cl,48,500,BB Lomé,Réappro mi-semaine
+2026-04-21,Castel Beer 65cl,24,500,BB Lomé,
+2026-04-21,Guilele 65cl,24,450,BB Lomé,
+2026-04-21,Coca-Cola 33cl,48,250,Brasseries Lomé,
+2026-04-21,Fanta Orange 33cl,48,250,Brasseries Lomé,
+2026-04-21,Becks 33cl,12,700,Importateur,
+2026-04-21,Amstel 33cl,12,600,Importateur,
+2026-04-21,Eau Gazeuse 50cl,24,400,Importateur,
+2026-04-21,Eau Minérale SBL 50cl,48,150,Distributeur,
+2026-04-22,Whisky JD 4cl,20,800,Importateur,Stock spiritueux
+2026-04-22,Whisky JB 4cl,20,600,Importateur,
+2026-04-22,Vodka Smirnoff 4cl,20,500,Importateur,
+2026-04-22,Gordon's Gin 4cl,20,500,Importateur,
+2026-04-22,Tequila 4cl,15,600,Importateur,
+2026-04-22,Rhum Negrita 20cl,6,1500,Importateur,
+2026-04-22,Baileys 4cl,12,700,Importateur,
+2026-04-22,Campari 4cl,12,500,Importateur,
+2026-04-23,Flag Spéciale 65cl,144,500,BB Lomé,Stock week-end
+2026-04-23,Castel Beer 65cl,96,500,BB Lomé,Stock week-end
+2026-04-23,Guilele 65cl,72,450,BB Lomé,
+2026-04-23,Heineken 33cl,48,600,Importateur,
+2026-04-23,Guinness 50cl,48,600,Importateur,
+2026-04-23,Desperados 33cl,36,700,Importateur,
+2026-04-23,Coca-Cola 33cl,72,250,Brasseries Lomé,
+2026-04-23,Fanta Orange 33cl,48,250,Brasseries Lomé,
+2026-04-23,Sprite 33cl,36,250,Brasseries Lomé,
+2026-04-23,Malta Guinness 33cl,36,300,BB Lomé,
+2026-04-23,Eau Minérale SBL 50cl,96,150,Distributeur,
+2026-04-23,Eau Minérale SBL 1.5L,36,350,Distributeur,
+2026-04-23,Chips Crunchy,48,150,Grossiste,
+2026-04-23,Arachides grillées (portion),50,100,Fournisseur local,Matières premières
+2026-04-23,Schweppes Tonic 33cl,24,350,Importateur,
+2026-04-23,Youki Citrus 33cl,36,200,Grossiste,
+2026-04-23,Youki Ananas 33cl,36,200,Grossiste,
+2026-04-23,Mirinda Orange 33cl,36,200,Grossiste,
+2026-04-23,Vin Rouge (verre),6,500,Importateur,Bouteilles vin
+2026-04-23,Vin Blanc (verre),6,500,Importateur,Bouteilles vin
+2026-04-23,Champagne (flûte),3,1500,Importateur,Stock fêtes
+2026-04-24,Flag Spéciale 65cl,48,500,BB Lomé,Urgence vendredi
+2026-04-24,Castel Beer 65cl,24,500,BB Lomé,
+2026-04-24,Coca-Cola 33cl,48,250,Brasseries Lomé,
+2026-04-24,Eau Minérale SBL 50cl,48,150,Distributeur,
+2026-04-24,Chips Crunchy,24,150,Grossiste,
+2026-04-24,Biscuits Salés,24,100,Grossiste,
+2026-04-24,Malta Guinness 33cl,24,300,BB Lomé,
+2026-04-24,Fanta Orange 33cl,36,250,Brasseries Lomé,`;
 
 // ── MODAL: IMPORT CSV ACHATS ──
 function ImportCSVAchatsModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -601,7 +601,7 @@ function ImportCSVAchatsModal({ visible, onClose }: { visible: boolean; onClose:
                   </Text>
                   <Pressable style={ica.exampleBtn} onPress={() => setCsvText(CSV_ACHATS_EXEMPLE)}>
                     <Ionicons name="flash-outline" size={14} color={Colors.accent} />
-                    <Text style={[ica.exampleBtnText, { color: Colors.accent }]}>{"Charger les données d'exemple (70 achats)"}</Text>
+                    <Text style={[ica.exampleBtnText, { color: Colors.accent }]}>{"Charger les données d'exemple (71 achats)"}</Text>
                   </Pressable>
                 </View>
 
