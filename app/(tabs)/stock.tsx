@@ -40,7 +40,7 @@ interface Vente {
   items?: VenteItem[];
 }
 
-type StockFilter = "tous" | "bas" | "rupture";
+type StockFilter = "normal" | "bas" | "rupture";
 
 const CAT_EMOJIS: Record<string, string> = {
   Boissons: "🥤",
@@ -52,7 +52,7 @@ const CAT_EMOJIS: Record<string, string> = {
 
 export default function StockScreen() {
   const insets = useSafeAreaInsets();
-  const [filter, setFilter] = useState<StockFilter>("tous");
+  const [filter, setFilter] = useState<StockFilter>("normal");
 
   const { data: produits = [], isLoading: loadingProduits } = useQuery<Produit[]>({
     queryKey: ["/api/produits"],
@@ -98,13 +98,12 @@ export default function StockScreen() {
 
   const totalEntrants = achats.reduce((s, a) => s + a.quantite, 0);
   const totalSortants = Object.values(sortantsByProduit).reduce((s, v) => s + v, 0);
-  const enRupture = produits.filter((p) => p.stock === 0).length;
-  const stockBasCount = produits.filter((p) => p.stock > 0 && p.stock < 10).length;
 
   const filteredProduits = React.useMemo(() => {
     let p = [...produits].sort((a, b) => a.nom.localeCompare(b.nom));
     if (filter === "bas") p = p.filter((x) => x.stock > 0 && x.stock < 10);
     if (filter === "rupture") p = p.filter((x) => x.stock === 0);
+    if (filter === "normal") p = p.filter((x) => x.stock >= 10);
     return p;
   }, [produits, filter]);
 
@@ -192,27 +191,6 @@ export default function StockScreen() {
         </View>
       </View>
 
-      {(enRupture > 0 || stockBasCount > 0) && (
-        <View style={styles.alertRow}>
-          {enRupture > 0 && (
-            <View style={[styles.alertBadge, { backgroundColor: Colors.danger + "15", borderColor: Colors.danger + "40" }]}>
-              <Ionicons name="alert-circle" size={14} color={Colors.danger} />
-              <Text style={[styles.alertText, { color: Colors.danger }]}>
-                {enRupture} rupture(s)
-              </Text>
-            </View>
-          )}
-          {stockBasCount > 0 && (
-            <View style={[styles.alertBadge, { backgroundColor: Colors.warning + "15", borderColor: Colors.warning + "40" }]}>
-              <Ionicons name="warning" size={14} color={Colors.warning} />
-              <Text style={[styles.alertText, { color: Colors.warning }]}>
-                {stockBasCount} stock(s) bas
-              </Text>
-            </View>
-          )}
-        </View>
-      )}
-
       {/* Filter tabs */}
       <ScrollView
         horizontal
@@ -222,7 +200,7 @@ export default function StockScreen() {
       >
         {(
           [
-            ["tous", "Tous"],
+            ["normal", "Normal"],
             ["bas", "Stock bas"],
             ["rupture", "Rupture"],
           ] as [StockFilter, string][]
@@ -262,8 +240,8 @@ export default function StockScreen() {
           <View style={styles.emptyBox}>
             <Text style={{ fontSize: 48 }}>📦</Text>
             <Text style={styles.emptyText}>
-              {filter === "tous"
-                ? "Aucun produit"
+              {filter === "normal"
+                ? "Aucun produit en stock normal"
                 : filter === "bas"
                 ? "Aucun produit en stock bas"
                 : "Aucune rupture de stock"}
@@ -311,17 +289,6 @@ const styles = StyleSheet.create({
   },
   summaryLabel: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textMuted },
   summaryValue: { fontSize: 20, fontFamily: "Inter_700Bold" },
-  alertRow: { flexDirection: "row", gap: 8, marginHorizontal: 20, marginBottom: 10 },
-  alertBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  alertText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
   filterRow: { marginBottom: 8 },
   filterBtn: {
     paddingHorizontal: 14,
