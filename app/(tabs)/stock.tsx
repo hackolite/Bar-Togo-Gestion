@@ -173,86 +173,82 @@ export default function StockScreen() {
         </View>
       </View>
 
-      <FlatList
-        ListHeaderComponent={
+      {/* Summary cards */}
+      <View style={styles.summaryRow}>
+        <View style={[styles.summaryCard, { borderLeftColor: Colors.success }]}>
+          <Ionicons name="arrow-up-circle" size={22} color={Colors.success} />
           <View>
-            {/* Summary cards */}
-            <View style={styles.summaryRow}>
-              <View style={[styles.summaryCard, { borderLeftColor: Colors.success }]}>
-                <Ionicons name="arrow-up-circle" size={22} color={Colors.success} />
-                <View>
-                  <Text style={styles.summaryLabel}>Entrants</Text>
-                  <Text style={[styles.summaryValue, { color: Colors.success }]}>{totalEntrants}</Text>
-                </View>
-              </View>
-              <View style={[styles.summaryCard, { borderLeftColor: Colors.danger }]}>
-                <Ionicons name="arrow-down-circle" size={22} color={Colors.danger} />
-                <View>
-                  <Text style={styles.summaryLabel}>Sortants</Text>
-                  <Text style={[styles.summaryValue, { color: Colors.danger }]}>{totalSortants}</Text>
-                </View>
-              </View>
-            </View>
-
-            {(enRupture > 0 || stockBasCount > 0) && (
-              <View style={styles.alertRow}>
-                {enRupture > 0 && (
-                  <View style={[styles.alertBadge, { backgroundColor: Colors.danger + "15", borderColor: Colors.danger + "40" }]}>
-                    <Ionicons name="alert-circle" size={14} color={Colors.danger} />
-                    <Text style={[styles.alertText, { color: Colors.danger }]}>
-                      {enRupture} rupture(s)
-                    </Text>
-                  </View>
-                )}
-                {stockBasCount > 0 && (
-                  <View style={[styles.alertBadge, { backgroundColor: Colors.warning + "15", borderColor: Colors.warning + "40" }]}>
-                    <Ionicons name="warning" size={14} color={Colors.warning} />
-                    <Text style={[styles.alertText, { color: Colors.warning }]}>
-                      {stockBasCount} stock(s) bas
-                    </Text>
-                  </View>
-                )}
-              </View>
-            )}
-
-            {/* Filter tabs */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.filterRow}
-              contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
-            >
-              {(
-                [
-                  ["tous", "Tous"],
-                  ["bas", "Stock bas"],
-                  ["rupture", "Rupture"],
-                ] as [StockFilter, string][]
-              ).map(([key, label]) => (
-                <Pressable
-                  key={key}
-                  style={[styles.filterBtn, filter === key && styles.filterBtnActive]}
-                  onPress={() => setFilter(key)}
-                >
-                  <Text style={[styles.filterText, filter === key && styles.filterTextActive]}>
-                    {label}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-
-            {/* Column headers */}
-            <View style={styles.listHeader}>
-              <Text style={styles.listHeaderText}>Produit</Text>
-              <View style={styles.listHeaderRight}>
-                <Text style={[styles.listHeaderCol, { color: Colors.success }]}>↑ Entrée</Text>
-                <Text style={[styles.listHeaderCol, { color: Colors.danger }]}>↓ Sortie</Text>
-                <Text style={styles.listHeaderCol}>Stock</Text>
-              </View>
-            </View>
+            <Text style={styles.summaryLabel}>Entrants</Text>
+            <Text style={[styles.summaryValue, { color: Colors.success }]}>{totalEntrants}</Text>
           </View>
-        }
+        </View>
+        <View style={[styles.summaryCard, { borderLeftColor: Colors.danger }]}>
+          <Ionicons name="arrow-down-circle" size={22} color={Colors.danger} />
+          <View>
+            <Text style={styles.summaryLabel}>Sortants</Text>
+            <Text style={[styles.summaryValue, { color: Colors.danger }]}>{totalSortants}</Text>
+          </View>
+        </View>
+      </View>
 
+      {(enRupture > 0 || stockBasCount > 0) && (
+        <View style={styles.alertRow}>
+          {enRupture > 0 && (
+            <View style={[styles.alertBadge, { backgroundColor: Colors.danger + "15", borderColor: Colors.danger + "40" }]}>
+              <Ionicons name="alert-circle" size={14} color={Colors.danger} />
+              <Text style={[styles.alertText, { color: Colors.danger }]}>
+                {enRupture} rupture(s)
+              </Text>
+            </View>
+          )}
+          {stockBasCount > 0 && (
+            <View style={[styles.alertBadge, { backgroundColor: Colors.warning + "15", borderColor: Colors.warning + "40" }]}>
+              <Ionicons name="warning" size={14} color={Colors.warning} />
+              <Text style={[styles.alertText, { color: Colors.warning }]}>
+                {stockBasCount} stock(s) bas
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* Filter tabs */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterRow}
+        contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
+      >
+        {(
+          [
+            ["tous", "Tous"],
+            ["bas", "Stock bas"],
+            ["rupture", "Rupture"],
+          ] as [StockFilter, string][]
+        ).map(([key, label]) => (
+          <Pressable
+            key={key}
+            style={[styles.filterBtn, filter === key && styles.filterBtnActive]}
+            onPress={() => setFilter(key)}
+          >
+            <Text style={[styles.filterText, filter === key && styles.filterTextActive]}>
+              {label}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+
+      {/* Column headers */}
+      <View style={styles.listHeader}>
+        <Text style={styles.listHeaderText}>Produit</Text>
+        <View style={styles.listHeaderRight}>
+          <Text style={[styles.listHeaderCol, { color: Colors.success }]}>↑ Entrée</Text>
+          <Text style={[styles.listHeaderCol, { color: Colors.danger }]}>↓ Sortie</Text>
+          <Text style={styles.listHeaderCol}>Stock</Text>
+        </View>
+      </View>
+
+      <FlatList
         data={filteredProduits}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
