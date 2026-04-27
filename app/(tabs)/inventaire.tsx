@@ -643,8 +643,6 @@ export default function InventaireScreen() {
   const [csvVisible, setCsvVisible] = useState(false);
   const [editing, setEditing] = useState<Produit | null>(null);
   const [search, setSearch] = useState("");
-  const [catFilter, setCatFilter] = useState<string | null>(null);
-
   const { data: produits = [], isLoading } = useQuery<Produit[]>({
     queryKey: ["/api/produits"],
     queryFn: async () => {
@@ -673,12 +671,10 @@ export default function InventaireScreen() {
 
   const filtered = produits.filter((p) => {
     const q = search.toLowerCase();
-    const matchSearch = !q ||
+    return !q ||
       p.nom.toLowerCase().includes(q) ||
       p.categorie.toLowerCase().includes(q) ||
       (p.ean && p.ean.includes(q));
-    const matchCat = !catFilter || p.categorie === catFilter;
-    return matchSearch && matchCat;
   });
 
   const confirmDelete = (p: Produit) => {
@@ -790,18 +786,6 @@ export default function InventaireScreen() {
         ) : null}
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catRow} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>
-        <Pressable style={[styles.catFilterBtn, !catFilter && styles.catFilterBtnActive]} onPress={() => setCatFilter(null)}>
-          <Text style={[styles.catFilterText, !catFilter && styles.catFilterTextActive]}>Tous</Text>
-        </Pressable>
-        {CATEGORIES.map((c) => (
-          <Pressable key={c} style={[styles.catFilterBtn, catFilter === c && styles.catFilterBtnActive]} onPress={() => setCatFilter(catFilter === c ? null : c)}>
-            <Text style={styles.catFilterEmojiSmall}>{CAT_EMOJIS[c]}</Text>
-            <Text style={[styles.catFilterText, catFilter === c && styles.catFilterTextActive]}>{c}</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
-
       {isLoading ? (
         <View style={styles.loadingBox}><ActivityIndicator color={Colors.primary} size="large" /></View>
       ) : (
@@ -814,8 +798,8 @@ export default function InventaireScreen() {
           ListEmptyComponent={
             <View style={styles.emptyBox}>
               <Text style={{ fontSize: 52 }}>📦</Text>
-              <Text style={styles.emptyText}>{search || catFilter ? "Aucun résultat" : "Aucun produit"}</Text>
-              {!search && !catFilter && produits.length === 0 && (
+              <Text style={styles.emptyText}>{search ? "Aucun résultat" : "Aucun produit"}</Text>
+              {!search && produits.length === 0 && (
                 <>
                   <Text style={styles.emptySubText}>Ajoutez vos produits manuellement ou chargez la liste par défaut</Text>
                   <Pressable
@@ -861,12 +845,6 @@ const styles = StyleSheet.create({
   addBtn: { width: 42, height: 42, borderRadius: 12, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
   searchRow: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.surface, marginHorizontal: 20, marginBottom: 8, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, gap: 10, borderWidth: 1, borderColor: Colors.border },
   searchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.text, padding: 0 },
-  catRow: { marginBottom: 12 },
-  catFilterBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: Colors.surface, borderWidth: 1.5, borderColor: Colors.border },
-  catFilterBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  catFilterText: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.textMuted },
-  catFilterTextActive: { color: "#fff" },
-  catFilterEmojiSmall: { fontSize: 13 },
   list: { paddingHorizontal: 16, gap: 12 },
   // ── CARD ──
   produitCard: { backgroundColor: Colors.surface, borderRadius: 18, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 10, elevation: 2 },
