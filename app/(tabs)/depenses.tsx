@@ -316,11 +316,7 @@ export default function DepensesScreen() {
     const cat = getCat(item.categorie);
     const isMensuelle = item.recurrence === "mensuelle";
     return (
-      <Pressable
-        style={({ pressed }) => [ds.depCard, { opacity: pressed ? 0.95 : 1 }, isMensuelle && { borderLeftWidth: 4, borderLeftColor: Colors.accent }]}
-        onPress={() => { setEditing(item); setModalVisible(true); }}
-        onLongPress={() => confirmDelete(item)}
-      >
+      <View style={[ds.depCard, isMensuelle && { borderLeftWidth: 4, borderLeftColor: Colors.accent }]}>
         <View style={[ds.depIcon, { backgroundColor: cat.color + "20" }]}>
           <Ionicons name={cat.icon} size={20} color={cat.color} />
         </View>
@@ -341,15 +337,31 @@ export default function DepensesScreen() {
           </View>
           {item.note ? <Text style={ds.depNote} numberOfLines={1}>{item.note}</Text> : null}
         </View>
-        <View style={{ alignItems: "flex-end" }}>
+        <View style={{ alignItems: "flex-end", gap: 6 }}>
           <Text style={ds.depMontant}>{formatFCFA(item.montant)}</Text>
           {isMensuelle && (
             <Text style={ds.depMontantHint}>
               ≈ {formatFCFA(Math.round(Number(item.montant) / new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()))} / jour
             </Text>
           )}
+          <View style={ds.depActions}>
+            <Pressable
+              style={({ pressed }) => [ds.depActionBtn, ds.depEditBtn, { opacity: pressed ? 0.7 : 1 }]}
+              onPress={() => { setEditing(item); setModalVisible(true); }}
+              hitSlop={6}
+            >
+              <Ionicons name="pencil" size={13} color={Colors.primary} />
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [ds.depActionBtn, ds.depDeleteBtn, { opacity: pressed ? 0.7 : 1 }]}
+              onPress={() => confirmDelete(item)}
+              hitSlop={6}
+            >
+              <Ionicons name="trash" size={13} color={Colors.danger} />
+            </Pressable>
+          </View>
         </View>
-      </Pressable>
+      </View>
     );
   };
 
@@ -442,6 +454,10 @@ const ds = StyleSheet.create({
   depNote: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: 3 },
   depMontant: { fontSize: 15, fontFamily: "Inter_700Bold", color: Colors.danger, flexShrink: 0 },
   depMontantHint: { fontSize: 10, fontFamily: "Inter_400Regular", color: Colors.accent, marginTop: 2 },
+  depActions: { flexDirection: "row", gap: 6, marginTop: 2 },
+  depActionBtn: { width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center", borderWidth: 1 },
+  depEditBtn: { backgroundColor: Colors.primary + "15", borderColor: Colors.primary + "40" },
+  depDeleteBtn: { backgroundColor: Colors.danger + "12", borderColor: Colors.danger + "30" },
   badgeMensuelle: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: Colors.accent + "20" },
   badgeMensuelleText: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: Colors.accent },
   loadingBox: { flex: 1, alignItems: "center", justifyContent: "center" },
