@@ -1,12 +1,12 @@
-// Palette africaine — jaune, bleu, rouge
+// Palette africaine — couleurs du drapeau togolais : vert, jaune, rouge
 const primary = "#D32F2F";   // Rouge africain vif
 const accent  = "#FFC107";   // Or/Jaune africain
-const blue    = "#1565C0";   // Bleu profond
+const green   = "#27AE60";   // Vert togolais
 
 export default {
   primary,
   accent,
-  blue,
+  green,
   background: "#FFF8F0",     // Crème chaud
   surface: "#FFFFFF",
   text: "#1A1A1A",
@@ -15,7 +15,7 @@ export default {
   success: "#2E7D32",
   danger: "#B71C1C",
   warning: "#E65100",
-  info: blue,
+  info: green,
   card: "#FFFFFF",
   light: {
     tint: primary,
