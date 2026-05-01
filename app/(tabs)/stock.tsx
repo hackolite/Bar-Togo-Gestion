@@ -26,6 +26,7 @@ interface AchatFournisseur {
   id: number;
   produitId: number;
   quantite: number;
+  date?: string;
 }
 
 interface VenteItem {
@@ -35,6 +36,7 @@ interface VenteItem {
 
 interface Vente {
   id: number;
+  date?: string;
   items?: VenteItem[];
 }
 
@@ -94,9 +96,28 @@ export default function StockScreen() {
   const totalEntrants = achats.reduce((s, a) => s + a.quantite, 0);
   const totalSortants = Object.values(sortantsByProduit).reduce((s, v) => s + v, 0);
 
+  const latestMovementByProduit = React.useMemo(() => {
+    const map: Record<number, number> = {};
+    achats.forEach((a) => {
+      const ts = a.date ? new Date(a.date).getTime() : 0;
+      if (!map[a.produitId] || ts > map[a.produitId]) map[a.produitId] = ts;
+    });
+    ventes.forEach((v) => {
+      const ts = v.date ? new Date(v.date).getTime() : 0;
+      (v.items ?? []).forEach((item) => {
+        if (!map[item.produitId] || ts > map[item.produitId]) map[item.produitId] = ts;
+      });
+    });
+    return map;
+  }, [achats, ventes]);
+
   const filteredProduits = React.useMemo(() => {
-    return [...produits].sort((a, b) => a.nom.localeCompare(b.nom));
-  }, [produits]);
+    return [...produits].sort((a, b) => {
+      const da = latestMovementByProduit[a.id] ?? 0;
+      const db = latestMovementByProduit[b.id] ?? 0;
+      return db - da;
+    });
+  }, [produits, latestMovementByProduit]);
 
   const topInsets = isLiquidGlassAvailable() ? Math.max(insets.top, 67) : insets.top;
 
@@ -105,6 +126,10 @@ export default function StockScreen() {
     const sortants = sortantsByProduit[item.id] ?? 0;
     const stockBas = item.stock > 0 && item.stock < 10;
     const rupture = item.stock === 0;
+    const lastTs = latestMovementByProduit[item.id];
+    const lastDateStr = lastTs
+      ? new Date(lastTs).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+      : null;
 
     return (
       <View style={styles.card}>
@@ -117,6 +142,11 @@ export default function StockScreen() {
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={styles.produitNom} numberOfLines={1}>{item.nom}</Text>
             <Text style={styles.categorie}>{item.categorie}</Text>
+            {lastDateStr && (
+              <Text style={styles.lastMovement} numberOfLines={1}>
+                <Ionicons name="time-outline" size={10} color={Colors.textMuted} /> {lastDateStr}
+              </Text>
+            )}
           </View>
         </View>
         <View style={styles.cardRight}>
@@ -157,10 +187,17 @@ export default function StockScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: topInsets + 16 }]}>
-        <View>
-          <Text style={styles.title}>Stock</Text>
-          <Text style={styles.subtitle}>{produits.length} produit(s)</Text>
+      <View style={{ paddingTop: topInsets + 16, backgroundColor: Colors.background }}>
+        <View style={styles.headerAccent}>
+          <View style={[styles.accentBar, { backgroundColor: Colors.primary }]} />
+          <View style={[styles.accentBar, { backgroundColor: Colors.accent }]} />
+          <View style={[styles.accentBar, { backgroundColor: Colors.blue }]} />
+        </View>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>Stock</Text>
+            <Text style={styles.subtitle}>{produits.length} produit(s) · tri par mouvement récent</Text>
+          </View>
         </View>
       </View>
 
@@ -312,4 +349,7 @@ const styles = StyleSheet.create({
   stockBadgeText: { fontSize: 13, fontFamily: "Inter_700Bold", color: "#fff" },
   emptyBox: { alignItems: "center", paddingTop: 60, gap: 12 },
   emptyText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.textMuted, textAlign: "center" },
+  lastMovement: { fontSize: 10, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: 2 },
+  headerAccent: { flexDirection: "row", height: 4, marginBottom: 14, marginHorizontal: 20, borderRadius: 2, overflow: "hidden" },
+  accentBar: { flex: 1 },
 });
