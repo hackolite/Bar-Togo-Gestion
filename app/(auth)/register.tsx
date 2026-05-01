@@ -62,11 +62,6 @@ export default function RegisterScreen() {
       >
         {/* ── BANNIÈRE AFRICAINE ── */}
         <View style={[styles.heroBanner, { paddingTop: insets.top + 28 }]}>
-          <View style={styles.tricolorBar}>
-            <View style={[styles.tricolorStripe, { backgroundColor: Colors.primary }]} />
-            <View style={[styles.tricolorStripe, { backgroundColor: Colors.accent }]} />
-            <View style={[styles.tricolorStripe, { backgroundColor: Colors.blue }]} />
-          </View>
           <View style={styles.geoDeco1} />
           <View style={styles.geoDeco2} />
 
@@ -161,7 +156,6 @@ export default function RegisterScreen() {
             <View style={styles.accentLine} />
             <View style={[styles.accentDot, { backgroundColor: Colors.primary }]} />
             <View style={[styles.accentDot, { backgroundColor: Colors.accent }]} />
-            <View style={[styles.accentDot, { backgroundColor: Colors.blue }]} />
             <View style={styles.accentLine} />
           </View>
 
@@ -184,21 +178,12 @@ const styles = StyleSheet.create({
   content: {},
 
   heroBanner: {
-    backgroundColor: Colors.blue,
+    backgroundColor: Colors.primary,
     alignItems: "center",
     paddingBottom: 36,
     overflow: "hidden",
     position: "relative",
   },
-  tricolorBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    height: 6,
-  },
-  tricolorStripe: { flex: 1 },
   geoDeco1: {
     position: "absolute",
     top: -30,
@@ -206,7 +191,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     opacity: 0.2,
   },
   geoDeco2: {
@@ -304,7 +289,7 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   btn: {
-    backgroundColor: Colors.blue,
+    backgroundColor: Colors.primary,
     borderRadius: 16,
     paddingVertical: 17,
     alignItems: "center",
@@ -312,7 +297,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     gap: 8,
-    shadowColor: Colors.blue,
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 12,

@@ -73,7 +73,7 @@ const shellStyles = StyleSheet.create({
     padding: 20,
     ...(Platform.OS === "web"
       ? ({
-          backgroundImage: `linear-gradient(135deg, ${Colors.primary}18 0%, ${Colors.background} 45%, ${Colors.blue}12 100%)`,
+          backgroundImage: `linear-gradient(135deg, ${Colors.primary}18 0%, ${Colors.background} 45%, ${Colors.accent}12 100%)`,
         } as object)
       : {}),
   },

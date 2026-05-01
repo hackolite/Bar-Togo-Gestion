@@ -38,7 +38,7 @@ interface Produit {
 const CATEGORIES = ["Boissons", "Alcools", "Cocktails", "Nourriture", "Autres"];
 
 const CAT_COLORS: Record<string, string> = {
-  Boissons: "#3A86FF",
+  Boissons: "#27AE60",
   Alcools: "#8B5CF6",
   Cocktails: "#EC4899",
   Nourriture: "#F97316",

@@ -190,7 +190,6 @@ export default function StockScreen() {
         <View style={styles.headerAccent}>
           <View style={[styles.accentBar, { backgroundColor: Colors.primary }]} />
           <View style={[styles.accentBar, { backgroundColor: Colors.accent }]} />
-          <View style={[styles.accentBar, { backgroundColor: Colors.blue }]} />
         </View>
         <View style={styles.header}>
           <View>

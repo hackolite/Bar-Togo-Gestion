@@ -57,13 +57,6 @@ export default function LoginScreen() {
       >
         {/* ── BANNIÈRE AFRICAINE ── */}
         <View style={[styles.heroBanner, { paddingTop: insets.top + 36 }]}>
-          {/* Bandes tricolores en bas de la bannière */}
-          <View style={styles.tricolorBar}>
-            <View style={[styles.tricolorStripe, { backgroundColor: Colors.primary }]} />
-            <View style={[styles.tricolorStripe, { backgroundColor: Colors.accent }]} />
-            <View style={[styles.tricolorStripe, { backgroundColor: Colors.blue }]} />
-          </View>
-
           {/* Décoration géométrique africaine */}
           <View style={styles.geoDeco1} />
           <View style={styles.geoDeco2} />
@@ -146,7 +139,6 @@ export default function LoginScreen() {
             <View style={styles.accentLine} />
             <View style={[styles.accentDot, { backgroundColor: Colors.primary }]} />
             <View style={[styles.accentDot, { backgroundColor: Colors.accent }]} />
-            <View style={[styles.accentDot, { backgroundColor: Colors.blue }]} />
             <View style={styles.accentLine} />
           </View>
 
@@ -176,15 +168,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     position: "relative",
   },
-  tricolorBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    height: 6,
-  },
-  tricolorStripe: { flex: 1 },
   geoDeco1: {
     position: "absolute",
     top: -40,
@@ -202,7 +185,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: Colors.blue,
+    backgroundColor: Colors.accent,
     opacity: 0.18,
   },
   logoCircle: {
@@ -336,5 +319,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   footerText: { color: Colors.textMuted, fontSize: 14, fontFamily: "Inter_400Regular" },
-  link: { color: Colors.blue, fontSize: 14, fontFamily: "Inter_700Bold" },
+  link: { color: Colors.primary, fontSize: 14, fontFamily: "Inter_700Bold" },
 });
