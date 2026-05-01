@@ -366,7 +366,7 @@ export default function DepensesScreen() {
 
   return (
     <View style={ds.container}>
-      <View style={[ds.header, { paddingTop: topInsets + 16 }]}>
+      <View style={[ds.header, { paddingTop: topInsets + 30 }]}>
         <View>
           <Text style={ds.title}>Dépenses</Text>
           <Text style={ds.subtitle}>

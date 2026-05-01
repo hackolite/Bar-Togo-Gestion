@@ -309,7 +309,7 @@ export default function FournisseursScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: topInset + 16 }]}>
+      <View style={[styles.header, { paddingTop: topInset + 30 }]}>
         <View>
           <Text style={styles.title}>Fournisseurs</Text>
           <Text style={styles.subtitle}>{fournisseurs.length} fournisseur(s)</Text>
