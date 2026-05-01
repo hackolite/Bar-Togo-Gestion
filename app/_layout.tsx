@@ -73,7 +73,7 @@ const shellStyles = StyleSheet.create({
     padding: 20,
     ...(Platform.OS === "web"
       ? ({
-          backgroundImage: `linear-gradient(135deg, ${Colors.primary}10 0%, ${Colors.background} 50%, ${Colors.accent}10 100%)`,
+          backgroundImage: `linear-gradient(135deg, ${Colors.primary}18 0%, ${Colors.background} 45%, ${Colors.blue}12 100%)`,
         } as object)
       : {}),
   },
@@ -83,11 +83,11 @@ const shellStyles = StyleSheet.create({
     borderRadius: 28,
     backgroundColor: Colors.surface,
     overflow: "hidden",
-    borderWidth: 1,
-    borderColor: Colors.border,
-    shadowColor: "#000",
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.22,
     shadowRadius: 32,
     elevation: 12,
   },
