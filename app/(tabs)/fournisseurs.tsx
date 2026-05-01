@@ -1,4 +1,3 @@
-import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { showAlert } from "@/lib/alert";
 import React, { useState } from "react";
 import {
@@ -268,7 +267,7 @@ export default function FournisseursScreen() {
   const [editing, setEditing] = useState<Fournisseur | null>(null);
   const [search, setSearch] = useState("");
 
-  const topInset = isLiquidGlassAvailable() ? Math.max(insets.top, 67) : insets.top;
+  const topInset = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
   const { data: fournisseurs = [], isLoading } = useQuery<Fournisseur[]>({

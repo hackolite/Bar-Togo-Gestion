@@ -1,4 +1,3 @@
-import { isLiquidGlassAvailable } from "expo-glass-effect";
 import React from "react";
 import {
   View,
@@ -119,7 +118,7 @@ export default function StockScreen() {
     });
   }, [produits, latestMovementByProduit]);
 
-  const topInsets = isLiquidGlassAvailable() ? Math.max(insets.top, 67) : insets.top;
+  const topInsets = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
   const renderItem = ({ item }: { item: Produit }) => {
     const entrants = entrantsByProduit[item.id] ?? 0;
