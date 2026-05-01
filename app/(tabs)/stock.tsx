@@ -186,7 +186,7 @@ export default function StockScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={{ paddingTop: topInsets + 16, backgroundColor: Colors.background }}>
+      <View style={{ paddingTop: topInsets + 30, backgroundColor: Colors.background }}>
         <View style={styles.headerAccent}>
           <View style={[styles.accentBar, { backgroundColor: Colors.primary }]} />
           <View style={[styles.accentBar, { backgroundColor: Colors.accent }]} />

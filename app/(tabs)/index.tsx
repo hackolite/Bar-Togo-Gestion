@@ -331,7 +331,7 @@ export default function DashboardScreen() {
     <ScrollView
       style={styles.container}
       contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={[styles.content, { paddingTop: topInsets + 16, paddingBottom: Platform.OS === "web" ? 118 : 100 }]}
+      contentContainerStyle={[styles.content, { paddingTop: topInsets + 30, paddingBottom: Platform.OS === "web" ? 118 : 100 }]}
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.primary} />}
     >

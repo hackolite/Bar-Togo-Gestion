@@ -859,7 +859,7 @@ export default function AchatsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: topInsets + 16 }]}>
+      <View style={[styles.header, { paddingTop: topInsets + 30 }]}>
         <View>
           <Text style={styles.title}>Achats</Text>
           <Text style={styles.subtitle}>Aujourd'hui: {formatFCFA(totalJour)}</Text>

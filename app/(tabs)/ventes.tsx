@@ -878,7 +878,7 @@ export default function VentesScreen() {
 
   return (
     <View style={vs.container}>
-      <View style={[vs.header, { paddingTop: topInsets + 16 }]}>
+      <View style={[vs.header, { paddingTop: topInsets + 30 }]}>
         <View>
           <Text style={vs.title}>Ventes</Text>
           <Text style={vs.subtitle}>Aujourd'hui: {formatFCFA(totalJour)}</Text>

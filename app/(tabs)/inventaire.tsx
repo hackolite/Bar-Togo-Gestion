@@ -748,7 +748,7 @@ export default function InventaireScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: topInsets + 16 }]}>
+      <View style={[styles.header, { paddingTop: topInsets + 30 }]}>
         <View>
           <Text style={styles.title}>Catalogue</Text>
           <Text style={styles.subtitle}>{produits.length} produit(s) · référence</Text>
