@@ -15,7 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import Svg, { Rect, G, Text as SvgText, Line, Circle } from "react-native-svg";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth";
-import { apiRequest } from "@/lib/query-client";
+import { apiRequest, queryClient } from "@/lib/query-client";
+import { showAlert } from "@/lib/alert";
 import Colors from "@/constants/colors";
 
 function formatFCFA(amount: number) {
@@ -316,6 +317,34 @@ export default function DashboardScreen() {
   const [alertesStockVisible, setAlertesStockVisible] = useState(true);
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("7j");
   const [chartMetric, setChartMetric] = useState<ChartMetric>("marge");
+  const [isResetting, setIsResetting] = useState(false);
+
+  const handleResetData = () => {
+    showAlert(
+      "Réinitialiser les données",
+      "Cette action supprimera définitivement tous vos produits, ventes, achats, dépenses et fournisseurs. Les données utilisateurs seront conservées. Cette action est irréversible.",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Tout effacer",
+          style: "destructive",
+          onPress: async () => {
+            setIsResetting(true);
+            try {
+              await apiRequest("DELETE", "/api/reset-data");
+              queryClient.clear();
+              await refetch();
+              showAlert("Succès", "Toutes les données ont été effacées.");
+            } catch (e: any) {
+              showAlert("Erreur", e.message ?? "Une erreur est survenue.");
+            } finally {
+              setIsResetting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const topInsets = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const caAujourdhui = (stats?.ventesAujourdhui ?? 0) - (stats?.achatsAujourdhui ?? 0);
@@ -620,6 +649,29 @@ export default function DashboardScreen() {
 
         </>
       )}
+
+      {/* ── ZONE DANGER : RÉINITIALISATION ── */}
+      <View style={styles.dangerZone}>
+        <View style={styles.dangerDivider} />
+        <Text style={styles.dangerZoneTitle}>Zone dangereuse</Text>
+        <Pressable
+          style={[styles.dangerBtn, isResetting && { opacity: 0.6 }]}
+          onPress={handleResetData}
+          disabled={isResetting}
+        >
+          {isResetting ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Ionicons name="trash-outline" size={18} color="#fff" />
+          )}
+          <Text style={styles.dangerBtnText}>
+            {isResetting ? "Réinitialisation…" : "Effacer toutes les données"}
+          </Text>
+        </Pressable>
+        <Text style={styles.dangerHint}>
+          Supprime produits, ventes, achats, dépenses et fournisseurs.{"\n"}Les comptes utilisateurs sont conservés.
+        </Text>
+      </View>
     </ScrollView>
   );
 }
@@ -723,6 +775,14 @@ const styles = StyleSheet.create({
   emptyBox: { alignItems: "center", paddingVertical: 40, gap: 10 },
   emptyText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
   emptySubText: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted },
+
+  // Zone dangereuse
+  dangerZone: { marginTop: 24, marginBottom: 8 },
+  dangerDivider: { height: 1, backgroundColor: Colors.border, marginBottom: 16 },
+  dangerZoneTitle: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: Colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 },
+  dangerBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: Colors.danger, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 20 },
+  dangerBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  dangerHint: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textMuted, textAlign: "center", marginTop: 10, lineHeight: 17 },
 });
 
 const chartSel = StyleSheet.create({
