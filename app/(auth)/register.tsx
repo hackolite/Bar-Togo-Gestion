@@ -63,9 +63,9 @@ export default function RegisterScreen() {
         {/* ── BANNIÈRE AFRICAINE ── */}
         <View style={[styles.heroBanner, { paddingTop: insets.top + 28 }]}>
           <View style={styles.tricolorBar}>
-            <View style={[styles.tricolorStripe, { backgroundColor: Colors.blue }]} />
-            <View style={[styles.tricolorStripe, { backgroundColor: Colors.accent }]} />
             <View style={[styles.tricolorStripe, { backgroundColor: Colors.primary }]} />
+            <View style={[styles.tricolorStripe, { backgroundColor: Colors.accent }]} />
+            <View style={[styles.tricolorStripe, { backgroundColor: Colors.blue }]} />
           </View>
           <View style={styles.geoDeco1} />
           <View style={styles.geoDeco2} />
@@ -159,9 +159,9 @@ export default function RegisterScreen() {
 
           <View style={styles.accentDivider}>
             <View style={styles.accentLine} />
-            <View style={[styles.accentDot, { backgroundColor: Colors.blue }]} />
-            <View style={[styles.accentDot, { backgroundColor: Colors.accent }]} />
             <View style={[styles.accentDot, { backgroundColor: Colors.primary }]} />
+            <View style={[styles.accentDot, { backgroundColor: Colors.accent }]} />
+            <View style={[styles.accentDot, { backgroundColor: Colors.blue }]} />
             <View style={styles.accentLine} />
           </View>
 
