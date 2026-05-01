@@ -63,11 +63,19 @@ function ClassicTabLayout() {
           isIOS ? (
             <BlurView intensity={100} tint="light" style={StyleSheet.absoluteFill} />
           ) : isWeb ? (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.surface }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.surface }]}>
+              {/* Bande tricolore africaine en haut de la tab bar */}
+              <View style={{ flexDirection: "row", height: 3 }}>
+                <View style={{ flex: 1, backgroundColor: Colors.primary }} />
+                <View style={{ flex: 1, backgroundColor: Colors.accent }} />
+                <View style={{ flex: 1, backgroundColor: Colors.blue }} />
+              </View>
+            </View>
           ) : null,
         tabBarLabelStyle: {
-          fontFamily: "Inter_500Medium",
-          fontSize: 11,
+          fontFamily: "Inter_600SemiBold",
+          fontSize: 10,
+          letterSpacing: 0.3,
         },
       }}
     >

@@ -1,22 +1,25 @@
-const primary = "#2D6A4F";
-const accent = "#E9A818";
+// Palette africaine — jaune, bleu, rouge
+const primary = "#D32F2F";   // Rouge africain vif
+const accent  = "#FFC107";   // Or/Jaune africain
+const blue    = "#1565C0";   // Bleu profond
 
 export default {
   primary,
   accent,
-  background: "#F4F7F5",
+  blue,
+  background: "#FFF8F0",     // Crème chaud
   surface: "#FFFFFF",
-  text: "#1A2B1F",
-  textMuted: "#6E8B78",
-  border: "#D8E8DE",
-  success: "#52B788",
-  danger: "#E63946",
-  warning: "#F4A261",
-  info: "#3A86FF",
+  text: "#1A1A1A",
+  textMuted: "#777777",
+  border: "#E8D5C4",
+  success: "#2E7D32",
+  danger: "#B71C1C",
+  warning: "#E65100",
+  info: blue,
   card: "#FFFFFF",
   light: {
     tint: primary,
-    tabIconDefault: "#9BB5A7",
+    tabIconDefault: "#AAAAAA",
     tabIconSelected: primary,
   },
 };
