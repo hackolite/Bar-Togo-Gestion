@@ -13,8 +13,8 @@ import bcrypt from "bcryptjs";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { pool, db } from "./db";
-import { ventes, venteItems, achatsFournisseurs, produits } from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { ventes, venteItems, achatsFournisseurs, produits, depenses, fournisseurs } from "@shared/schema";
+import { eq, sql, inArray } from "drizzle-orm";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -643,6 +643,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (e: any) {
       res.status(400).json({ message: e.message });
+    }
+  });
+
+  // ── RESET DATA (supprime toutes les données sauf les users) ──
+  app.delete("/api/reset-data", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      await db.transaction(async (tx) => {
+        // 1. Supprimer les items de ventes liés aux ventes de l'utilisateur
+        const userVentes = await tx.select({ id: ventes.id }).from(ventes).where(eq(ventes.userId, userId));
+        if (userVentes.length > 0) {
+          const venteIds = userVentes.map((v) => v.id);
+          await tx.delete(venteItems).where(inArray(venteItems.venteId, venteIds));
+        }
+        // 2. Supprimer les ventes
+        await tx.delete(ventes).where(eq(ventes.userId, userId));
+        // 3. Supprimer les achats fournisseurs
+        await tx.delete(achatsFournisseurs).where(eq(achatsFournisseurs.userId, userId));
+        // 4. Supprimer les dépenses
+        await tx.delete(depenses).where(eq(depenses.userId, userId));
+        // 5. Supprimer les fournisseurs
+        await tx.delete(fournisseurs).where(eq(fournisseurs.userId, userId));
+        // 6. Supprimer les produits (en dernier car référencés par vente_items et achats)
+        await tx.delete(produits).where(eq(produits.userId, userId));
+      });
+      res.json({ success: true, message: "Données réinitialisées avec succès" });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
     }
   });
 
