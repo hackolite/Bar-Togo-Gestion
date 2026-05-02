@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="assets/images/icon.png" alt="MaquisGest Togo Logo" width="120" height="120" style="border-radius: 24px;" />
+<img src="assets/images/icon.png" alt="Maquistock Logo" width="120" height="120" style="border-radius: 24px;" />
 
-# 🍺 MaquisGest Togo
+# 🍺 Maquistock
 
 ### Application de gestion pour bars, maquis et restaurants au Togo
 
@@ -19,7 +19,7 @@
 
 ## 📱 Aperçu
 
-**MaquisGest Togo** est une application web et mobile complète de gestion commerciale, conçue spécialement pour les bars, maquis et petits restaurants togolais. Elle permet de suivre en temps réel les ventes, les stocks, les dépenses et les fournisseurs depuis n'importe quel appareil.
+**Maquistock** est une application web et mobile complète de gestion commerciale, conçue spécialement pour les bars, maquis et petits restaurants togolais. Elle permet de suivre en temps réel les ventes, les stocks, les dépenses et les fournisseurs depuis n'importe quel appareil.
 
 <div align="center">
 
@@ -134,7 +134,7 @@
 
 ## 🚀 Installation sur serveur OVH
 
-> Guide complet pour déployer MaquisGest Togo sur un VPS ou serveur dédié OVH.
+> Guide complet pour déployer Maquistock sur un VPS ou serveur dédié OVH.
 
 ### Prérequis
 
@@ -190,11 +190,11 @@ systemctl start postgresql
 sudo -u postgres psql
 
 # Dans le shell PostgreSQL, créez la base et l'utilisateur :
-CREATE DATABASE maquisgest;
-CREATE USER maquisgest_user WITH ENCRYPTED PASSWORD 'MotDePasseFort123!';
-GRANT ALL PRIVILEGES ON DATABASE maquisgest TO maquisgest_user;
-\c maquisgest
-GRANT ALL ON SCHEMA public TO maquisgest_user;
+CREATE DATABASE maquistock;
+CREATE USER maquistock_user WITH ENCRYPTED PASSWORD 'MotDePasseFort123!';
+GRANT ALL PRIVILEGES ON DATABASE maquistock TO maquistock_user;
+\c maquistock
+GRANT ALL ON SCHEMA public TO maquistock_user;
 \q
 ```
 
@@ -217,8 +217,8 @@ pm2 startup systemd
 
 ```bash
 # Créez un répertoire dédié
-mkdir -p /var/www/maquisgest
-cd /var/www/maquisgest
+mkdir -p /var/www/maquistock
+cd /var/www/maquistock
 
 # Clonez le dépôt
 git clone https://github.com/hackolite/Bar-Togo-Gestion.git .
@@ -233,7 +233,7 @@ npm install
 
 ```bash
 # Créez le fichier .env
-nano /var/www/maquisgest/.env
+nano /var/www/maquistock/.env
 ```
 
 Contenu du fichier `.env` :
@@ -244,7 +244,7 @@ Contenu du fichier `.env` :
 # ============================================
 
 # Base de données PostgreSQL
-DATABASE_URL=postgresql://maquisgest_user:MotDePasseFort123!@localhost:5432/maquisgest
+DATABASE_URL=postgresql://maquistock_user:MotDePasseFort123!@localhost:5432/maquistock
 
 # Serveur
 NODE_ENV=production
@@ -267,7 +267,7 @@ APP_DOMAIN=maquis.mondomaine.tg
 ### Étape 7 — Initialiser la base de données
 
 ```bash
-cd /var/www/maquisgest
+cd /var/www/maquistock
 
 # Chargez les variables d'environnement
 export $(grep -v '^#' .env | xargs)
@@ -281,7 +281,7 @@ npm run db:push
 ### Étape 8 — Construire l'application web
 
 ```bash
-cd /var/www/maquisgest
+cd /var/www/maquistock
 
 # Construisez le bundle web statique
 npm run expo:static:build
@@ -295,11 +295,11 @@ npm run server:build
 ### Étape 9 — Lancer avec PM2
 
 ```bash
-cd /var/www/maquisgest
+cd /var/www/maquistock
 
 # Démarrez le serveur en production
 pm2 start server_dist/index.js \
-  --name "maquisgest" \
+  --name "maquistock" \
   --env production \
   --time
 
@@ -308,7 +308,7 @@ pm2 save
 
 # Vérifiez que le serveur tourne
 pm2 status
-pm2 logs maquisgest --lines 20
+pm2 logs maquistock --lines 20
 ```
 
 ---
@@ -327,7 +327,7 @@ systemctl start nginx
 Créez la configuration Nginx pour votre domaine :
 
 ```bash
-nano /etc/nginx/sites-available/maquisgest
+nano /etc/nginx/sites-available/maquistock
 ```
 
 Collez la configuration suivante (remplacez `maquis.mondomaine.tg`) :
@@ -341,8 +341,8 @@ server {
     client_max_body_size 10M;
 
     # Logs
-    access_log /var/log/nginx/maquisgest.access.log;
-    error_log  /var/log/nginx/maquisgest.error.log;
+    access_log /var/log/nginx/maquistock.access.log;
+    error_log  /var/log/nginx/maquistock.error.log;
 
     location / {
         proxy_pass         http://127.0.0.1:5000;
@@ -370,7 +370,7 @@ server {
 
 ```bash
 # Activez le site
-ln -s /etc/nginx/sites-available/maquisgest /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/maquistock /etc/nginx/sites-enabled/
 
 # Vérifiez la configuration
 nginx -t
@@ -421,16 +421,16 @@ ufw status
 
 ```bash
 # Créez le script de sauvegarde
-mkdir -p /var/backups/maquisgest
-nano /usr/local/bin/backup-maquisgest.sh
+mkdir -p /var/backups/maquistock
+nano /usr/local/bin/backup-maquistock.sh
 ```
 
 ```bash
 #!/bin/bash
 DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/var/backups/maquisgest"
-DB_NAME="maquisgest"
-DB_USER="maquisgest_user"
+BACKUP_DIR="/var/backups/maquistock"
+DB_NAME="maquistock"
+DB_USER="maquistock_user"
 
 # Sauvegarde PostgreSQL
 PGPASSWORD="MotDePasseFort123!" pg_dump -U $DB_USER $DB_NAME \
@@ -444,12 +444,12 @@ echo "✅ Sauvegarde réussie : db_$DATE.sql.gz"
 
 ```bash
 # Rendez le script exécutable
-chmod +x /usr/local/bin/backup-maquisgest.sh
+chmod +x /usr/local/bin/backup-maquistock.sh
 
 # Ajoutez une tâche cron (sauvegarde quotidienne à 2h du matin)
 crontab -e
 # Ajoutez cette ligne :
-0 2 * * * /usr/local/bin/backup-maquisgest.sh >> /var/log/maquisgest-backup.log 2>&1
+0 2 * * * /usr/local/bin/backup-maquistock.sh >> /var/log/maquistock-backup.log 2>&1
 ```
 
 ---
@@ -479,7 +479,7 @@ curl -I https://maquis.mondomaine.tg
 Pour déployer une nouvelle version :
 
 ```bash
-cd /var/www/maquisgest
+cd /var/www/maquistock
 
 # Récupérez les dernières modifications
 git pull origin main
@@ -496,7 +496,7 @@ npm run expo:static:build
 npm run server:build
 
 # Redémarrez le serveur sans interruption
-pm2 reload maquisgest
+pm2 reload maquistock
 ```
 
 ---
@@ -565,7 +565,7 @@ npm run start
 | `DATABASE_URL` manquant | Vérifiez le fichier `.env` et que PostgreSQL est démarré |
 | Port 5000 déjà utilisé | Modifiez `PORT` dans `.env` |
 | Build web échoue | Vérifiez Node.js ≥ 18 et relancez `npm install` |
-| PM2 ne démarre pas | Vérifiez `pm2 logs maquisgest` pour les erreurs |
+| PM2 ne démarre pas | Vérifiez `pm2 logs maquistock` pour les erreurs |
 | Nginx 502 Bad Gateway | Vérifiez que PM2 tourne : `pm2 status` |
 | Certificat SSL échoue | Vérifiez que le domaine pointe vers l'IP du serveur |
 
@@ -573,7 +573,7 @@ npm run start
 
 ## 📄 Licence
 
-Ce projet est privé et propriétaire. Tous droits réservés © 2025 MaquisGest Togo.
+Ce projet est privé et propriétaire. Tous droits réservés © 2025 Maquistock.
 
 ---
 

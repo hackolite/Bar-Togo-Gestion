@@ -68,7 +68,7 @@ export default function RegisterScreen() {
           <View style={styles.logoCircle}>
             <Ionicons name="person-add" size={38} color="#fff" />
           </View>
-          <Text style={styles.appName}>MaquisGest Togo</Text>
+          <Text style={styles.appName}>Maquistock</Text>
           <Text style={styles.heroSubtitle}>Créer votre compte</Text>
         </View>
 

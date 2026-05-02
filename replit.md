@@ -1,4 +1,4 @@
-# BarGest Togo - Application de gestion bar-restaurant
+# Maquistock - Application de gestion bar-restaurant
 
 ## Architecture
 - **Frontend**: Expo (React Native) avec Expo Router (file-based routing)

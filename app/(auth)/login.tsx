@@ -64,7 +64,7 @@ export default function LoginScreen() {
           <View style={styles.logoCircle}>
             <Ionicons name="storefront" size={42} color="#fff" />
           </View>
-          <Text style={styles.appName}>MaquisGest Togo</Text>
+          <Text style={styles.appName}>Maquistock</Text>
           <Text style={styles.heroSubtitle}>Gestion de votre bar-restaurant</Text>
         </View>
 
