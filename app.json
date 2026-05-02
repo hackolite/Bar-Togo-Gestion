@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "MaquisGest Togo",
-    "slug": "bargest-togo",
+    "name": "Maquistock",
+    "slug": "maquistock",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -17,8 +17,8 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.myapp",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "BarGest utilise la galerie pour ajouter des photos aux produits.",
-        "NSCameraUsageDescription": "BarGest utilise la caméra pour photographier les produits."
+        "NSPhotoLibraryUsageDescription": "Maquistock utilise la galerie pour ajouter des photos aux produits.",
+        "NSCameraUsageDescription": "Maquistock utilise la caméra pour photographier les produits."
       }
     },
     "android": {
