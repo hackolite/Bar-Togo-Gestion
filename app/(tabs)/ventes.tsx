@@ -574,6 +574,7 @@ function ImportCSVVentesModal({ visible, onClose }: { visible: boolean; onClose:
   const [csvText, setCsvText] = useState("");
   const [skipFirstLine, setSkipFirstLine] = useState(true);
   const [preview, setPreview] = useState<string[][]>([]);
+  const [totalLines, setTotalLines] = useState(0);
   const [result, setResult] = useState<{ count: number; errors: string[] } | null>(null);
   const [step, setStep] = useState<"edit" | "preview" | "done">("edit");
 
@@ -581,6 +582,7 @@ function ImportCSVVentesModal({ visible, onClose }: { visible: boolean; onClose:
     if (visible) {
       setCsvText("");
       setPreview([]);
+      setTotalLines(0);
       setResult(null);
       setStep("edit");
     }
@@ -589,6 +591,7 @@ function ImportCSVVentesModal({ visible, onClose }: { visible: boolean; onClose:
   const parsePreview = () => {
     const lines = csvText.split(/\r?\n/).filter((l) => l.trim());
     const dataLines = skipFirstLine ? lines.slice(1) : lines;
+    setTotalLines(dataLines.length);
     const parsed = dataLines.slice(0, 10).map((l) =>
       l.split(",").map((c) => c.trim().replace(/^"|"$/g, ""))
     );
@@ -680,7 +683,7 @@ function ImportCSVVentesModal({ visible, onClose }: { visible: boolean; onClose:
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <Ionicons name="eye-outline" size={18} color={Colors.primary} />
                   <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.text }}>
-                    Aperçu ({preview.length} lignes{preview.length === 10 ? "+" : ""})
+                    Aperçu ({totalLines} lignes{totalLines > 10 ? ` · 10 affichées` : ""})
                   </Text>
                 </View>
                 {preview.map((row, i) => (
@@ -746,7 +749,7 @@ function ImportCSVVentesModal({ visible, onClose }: { visible: boolean; onClose:
                 ) : (
                   <>
                     <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
-                    <Text style={icv.saveBtnText}>Importer {preview.length} vente(s)</Text>
+                    <Text style={icv.saveBtnText}>Importer {totalLines} vente(s)</Text>
                   </>
                 )}
               </Pressable>
