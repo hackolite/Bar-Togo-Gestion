@@ -444,6 +444,7 @@ function ImportCSVModal({ visible, onClose }: { visible: boolean; onClose: () =>
   const [csvText, setCsvText] = useState("");
   const [skipFirstLine, setSkipFirstLine] = useState(true);
   const [preview, setPreview] = useState<string[][]>([]);
+  const [totalLines, setTotalLines] = useState(0);
   const [result, setResult] = useState<{ count: number; errors: string[] } | null>(null);
   const [step, setStep] = useState<"edit" | "preview" | "done">("edit");
 
@@ -451,6 +452,7 @@ function ImportCSVModal({ visible, onClose }: { visible: boolean; onClose: () =>
     if (visible) {
       setCsvText("");
       setPreview([]);
+      setTotalLines(0);
       setResult(null);
       setStep("edit");
     }
@@ -459,6 +461,7 @@ function ImportCSVModal({ visible, onClose }: { visible: boolean; onClose: () =>
   const parsePreview = () => {
     const lines = csvText.split(/\r?\n/).filter((l) => l.trim());
     const dataLines = skipFirstLine ? lines.slice(1) : lines;
+    setTotalLines(dataLines.length);
     const parsed = dataLines.slice(0, 10).map((l) =>
       l.split(",").map((c) => c.trim().replace(/^"|"$/g, ""))
     );
@@ -543,7 +546,7 @@ function ImportCSVModal({ visible, onClose }: { visible: boolean; onClose: () =>
               <>
                 <View style={csv.previewHeader}>
                   <Ionicons name="eye-outline" size={18} color={Colors.primary} />
-                  <Text style={csv.previewTitle}>Aperçu ({preview.length} lignes{preview.length === 10 ? "+" : ""})</Text>
+                  <Text style={csv.previewTitle}>Aperçu ({totalLines} lignes{totalLines > 10 ? ` · 10 affichées` : ""})</Text>
                 </View>
                 {preview.map((row, i) => (
                   <View key={i} style={csv.previewRow}>
@@ -598,7 +601,7 @@ function ImportCSVModal({ visible, onClose }: { visible: boolean; onClose: () =>
                 {mutation.isPending ? (
                   <><ActivityIndicator color="#fff" /><Text style={ms.saveBtnText}>Importation...</Text></>
                 ) : (
-                  <><Ionicons name="cloud-upload-outline" size={18} color="#fff" /><Text style={ms.saveBtnText}>Importer {preview.length} produit(s)</Text></>
+                  <><Ionicons name="cloud-upload-outline" size={18} color="#fff" /><Text style={ms.saveBtnText}>Importer {totalLines} produit(s)</Text></>
                 )}
               </Pressable>
             )}
