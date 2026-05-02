@@ -132,13 +132,13 @@
 
 ---
 
-## 🚀 Installation sur serveur IONOS
+## 🚀 Installation sur serveur OVH
 
-> Guide complet pour déployer MaquisGest Togo sur un VPS ou serveur dédié IONOS.
+> Guide complet pour déployer MaquisGest Togo sur un VPS ou serveur dédié OVH.
 
 ### Prérequis
 
-- Serveur IONOS **VPS Linux** (Ubuntu 22.04 LTS recommandé) ou serveur dédié
+- Serveur OVH **VPS Linux** (Ubuntu 24.04 LTS) ou serveur dédié
 - Accès SSH avec droits `sudo`
 - Un nom de domaine (ex : `maquis.mondomaine.tg`) pointant vers l'IP du serveur
 - Minimum : **2 Go de RAM**, **20 Go de disque**
@@ -148,8 +148,8 @@
 ### Étape 1 — Connexion et préparation du serveur
 
 ```bash
-# Connectez-vous à votre serveur IONOS via SSH
-ssh root@VOTRE_IP_IONOS
+# Connectez-vous à votre serveur OVH via SSH
+ssh root@VOTRE_IP_OVH
 
 # Mettez à jour le système
 apt update && apt upgrade -y
@@ -543,8 +543,8 @@ cd Bar-Togo-Gestion
 npm install
 
 # 3. Configurez la base de données locale
-cp .env.example .env
-# Éditez .env avec vos paramètres PostgreSQL locaux
+nano .env
+# Renseignez vos paramètres PostgreSQL locaux (voir exemple à l'étape 6 ci-dessus)
 
 # 4. Initialisez la base de données
 npm run db:push
